@@ -1,0 +1,301 @@
+"""필터 가능한 HTML 리포트 생성 (의존성 없는 순수 HTML+JS)."""
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime
+from typing import List
+
+import pandas as pd
+
+from .config import Config
+
+
+def _fmt_num(v, currency: str) -> str:
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return "-"
+    try:
+        if currency == "KRW":
+            return f"{v:,.0f}"
+        return f"{v:,.2f}"
+    except Exception:  # noqa: BLE001
+        return str(v)
+
+
+def build_report(df: pd.DataFrame, cfg: Config) -> str:
+    today = datetime.now().strftime("%Y-%m-%d")
+    out_file = os.path.join(cfg.output_path, f"report_{today}.html")
+
+    high_periods = cfg.high_periods_weeks
+    ma_periods = cfg.ma_periods_weeks
+
+    # 레코드를 JS에서 다룰 JSON으로 직렬화
+    records = []
+    for _, r in df.iterrows():
+        rec = {
+            "symbol": r["symbol"],
+            "name": r["name"],
+            "market": r["market"],
+            "country": r["country"],
+            "currency": r["currency"],
+            "sector": r.get("sector", ""),
+            "last_date": r["last_date"],
+            "close": None if pd.isna(r["close"]) else float(r["close"]),
+            "close_fmt": _fmt_num(r["close"], r["currency"]),
+            "aligned": bool(r["aligned"]),
+            "high_count": int(r["high_count"]),
+            "adv": None if pd.isna(r.get("avg_dollar_volume")) else float(r.get("avg_dollar_volume", 0)),
+        }
+        for p in high_periods:
+            v = r.get(f"high_{p}w")
+            rec[f"h{p}"] = (None if v is None or (isinstance(v, float) and pd.isna(v)) else bool(v))
+        for p in ma_periods:
+            v = r.get(f"ma_{p}w")
+            rec[f"ma{p}"] = (None if v is None or (isinstance(v, float) and pd.isna(v))
+                            else _fmt_num(v, r["currency"]))
+        records.append(rec)
+
+    data_json = json.dumps(records, ensure_ascii=False)
+    markets = sorted(df["market"].unique().tolist()) if not df.empty else []
+    html = _TEMPLATE.format(
+        today=today,
+        total=len(records),
+        aligned_count=int(df["aligned"].sum()) if not df.empty else 0,
+        high_periods=json.dumps(high_periods),
+        ma_periods=json.dumps(ma_periods),
+        markets=json.dumps(markets, ensure_ascii=False),
+        data_json=data_json,
+        include_mode=cfg.include_mode,
+    )
+    with open(out_file, "w", encoding="utf-8") as f:
+        f.write(html)
+    return out_file
+
+
+_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>신고가 · 정배열 스크리너 — {today}</title>
+<style>
+  :root {{
+    --bg:#0f1419; --panel:#1a2230; --panel2:#222c3c; --text:#e6edf3;
+    --muted:#8b98a9; --accent:#4a9eff; --green:#2ecc71; --amber:#f5a623;
+    --border:#2b3647; --red:#ff6b6b;
+  }}
+  * {{ box-sizing:border-box; }}
+  body {{ margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:14px; }}
+  header {{ padding:18px 24px; background:linear-gradient(135deg,#1a2230,#141b26);
+    border-bottom:1px solid var(--border); }}
+  header h1 {{ margin:0 0 4px; font-size:20px; }}
+  header .sub {{ color:var(--muted); font-size:13px; }}
+  .wrap {{ padding:16px 24px 60px; }}
+  .controls {{ background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; }}
+  .ctl {{ display:flex; flex-direction:column; gap:6px; }}
+  .ctl label {{ font-size:12px; color:var(--muted); }}
+  .ctl input[type=text], .ctl select {{ background:var(--panel2); border:1px solid var(--border);
+    color:var(--text); padding:7px 10px; border-radius:6px; font-size:13px; min-width:150px; }}
+  .chips {{ display:flex; flex-wrap:wrap; gap:8px; }}
+  .chip {{ user-select:none; cursor:pointer; padding:6px 11px; border-radius:20px;
+    border:1px solid var(--border); background:var(--panel2); color:var(--muted); font-size:12px; }}
+  .chip.active {{ background:var(--accent); color:#fff; border-color:var(--accent); }}
+  .chip.green.active {{ background:var(--green); border-color:var(--green); }}
+  .match-mode {{ display:flex; gap:6px; }}
+  .match-mode .chip.active {{ background:var(--amber); border-color:var(--amber); color:#111; }}
+  .stats {{ color:var(--muted); font-size:13px; margin:0 0 10px; }}
+  .stats b {{ color:var(--text); }}
+  table {{ width:100%; border-collapse:collapse; background:var(--panel); border-radius:10px; overflow:hidden; }}
+  thead th {{ position:sticky; top:0; background:var(--panel2); text-align:left; padding:10px 12px;
+    font-size:12px; color:var(--muted); border-bottom:1px solid var(--border); cursor:pointer; white-space:nowrap; }}
+  thead th:hover {{ color:var(--text); }}
+  tbody td {{ padding:9px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }}
+  tbody tr:hover {{ background:#1e2735; }}
+  .tag {{ display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:600; }}
+  .yes {{ background:rgba(46,204,113,.18); color:var(--green); }}
+  .no {{ color:#55606f; }}
+  .na {{ color:#3a4451; }}
+  .aligned-yes {{ background:rgba(74,158,255,.18); color:var(--accent); font-weight:600;
+    padding:2px 7px; border-radius:4px; }}
+  .mkt {{ font-size:11px; color:var(--muted); }}
+  .num {{ text-align:right; font-variant-numeric:tabular-nums; }}
+  .sym {{ font-weight:600; }}
+  .cc {{ font-size:11px; color:var(--muted); }}
+  footer {{ color:#55606f; font-size:12px; padding:16px 24px; }}
+  .sort-ind::after {{ content:" \25B4\25BE"; color:#3a4451; font-size:9px; }}
+  th.sort-asc::after {{ content:" \25B4"; color:var(--accent); }}
+  th.sort-desc::after {{ content:" \25BE"; color:var(--accent); }}
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 신고가 · 정배열 스크리너</h1>
+  <div class="sub">기준일 {today} · 포함모드 <code>{include_mode}</code> · 전체 {total}종목 (정배열 {aligned_count})</div>
+</header>
+<div class="wrap">
+  <div class="controls">
+    <div class="ctl">
+      <label>검색 (종목명/코드)</label>
+      <input id="search" type="text" placeholder="예: 삼성, AAPL..."/>
+    </div>
+    <div class="ctl">
+      <label>시장</label>
+      <select id="marketSel"><option value="">전체</option></select>
+    </div>
+    <div class="ctl">
+      <label>신고가 조건 (선택한 것만, OR/AND 전환 가능)</label>
+      <div class="chips" id="highChips"></div>
+    </div>
+    <div class="ctl">
+      <label>조건 결합</label>
+      <div class="chips match-mode" id="matchMode">
+        <span class="chip active" data-mode="or">하나라도(OR)</span>
+        <span class="chip" data-mode="and">모두(AND)</span>
+      </div>
+    </div>
+    <div class="ctl">
+      <label>정배열</label>
+      <div class="chips">
+        <span class="chip green" id="alignChip">정배열만 보기</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="stats" id="stats"></p>
+
+  <table id="tbl">
+    <thead><tr id="thead"></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+<footer>FinanceDataReader 기반 · 고가 기준 신고가 · 주봉 이동평균 정배열 · 투자 판단의 책임은 본인에게 있습니다.</footer>
+
+<script>
+const DATA = {data_json};
+const HIGHS = {high_periods};
+const MAS = {ma_periods};
+const MARKETS = {markets};
+
+const state = {{ search:"", market:"", highs:new Set(), matchMode:"or",
+  alignedOnly:false, sortKey:"high_count", sortDir:-1 }};
+
+// ---- 컨트롤 구성 ----
+const marketSel = document.getElementById('marketSel');
+MARKETS.forEach(m => {{ const o=document.createElement('option'); o.value=m; o.textContent=m; marketSel.appendChild(o); }});
+marketSel.addEventListener('change', e => {{ state.market=e.target.value; render(); }});
+
+document.getElementById('search').addEventListener('input', e => {{ state.search=e.target.value.toLowerCase(); render(); }});
+
+const highChips = document.getElementById('highChips');
+HIGHS.forEach(p => {{
+  const c=document.createElement('span'); c.className='chip'; c.textContent=p+'주'; c.dataset.p=p;
+  c.addEventListener('click', ()=>{{ if(state.highs.has(p)) state.highs.delete(p); else state.highs.add(p);
+    c.classList.toggle('active'); render(); }});
+  highChips.appendChild(c);
+}});
+
+document.querySelectorAll('#matchMode .chip').forEach(ch => {{
+  ch.addEventListener('click', ()=>{{
+    document.querySelectorAll('#matchMode .chip').forEach(x=>x.classList.remove('active'));
+    ch.classList.add('active'); state.matchMode=ch.dataset.mode; render();
+  }});
+}});
+
+const alignChip=document.getElementById('alignChip');
+alignChip.addEventListener('click', ()=>{{ state.alignedOnly=!state.alignedOnly; alignChip.classList.toggle('active'); render(); }});
+
+// ---- 테이블 헤더 ----
+const COLS = [
+  {{k:'symbol', t:'코드'}}, {{k:'name', t:'종목명'}}, {{k:'market', t:'시장'}},
+  {{k:'close', t:'종가', num:true}},
+];
+HIGHS.forEach(p => COLS.push({{k:'h'+p, t:p+'주신고가'}}));
+COLS.push({{k:'aligned', t:'정배열'}});
+MAS.forEach(p => COLS.push({{k:'ma'+p, t:'MA'+p+'주', num:true}}));
+COLS.push({{k:'high_count', t:'충족수', num:true}});
+COLS.push({{k:'last_date', t:'기준주'}});
+
+const thead=document.getElementById('thead');
+COLS.forEach(col => {{
+  const th=document.createElement('th'); th.textContent=col.t; th.className='sort-ind'; th.dataset.k=col.k;
+  if(col.num) th.classList.add('num');
+  th.addEventListener('click', ()=>{{
+    if(state.sortKey===col.k) state.sortDir*=-1; else {{ state.sortKey=col.k; state.sortDir=(col.num?-1:1); }}
+    render();
+  }});
+  thead.appendChild(th);
+}});
+
+// ---- 필터 로직 ----
+function passFilter(r) {{
+  if(state.market && r.market!==state.market) return false;
+  if(state.alignedOnly && !r.aligned) return false;
+  if(state.search) {{
+    const s=(r.name+' '+r.symbol).toLowerCase();
+    if(!s.includes(state.search)) return false;
+  }}
+  if(state.highs.size>0) {{
+    const sel=[...state.highs];
+    if(state.matchMode==='or') {{
+      if(!sel.some(p => r['h'+p]===true)) return false;
+    }} else {{
+      if(!sel.every(p => r['h'+p]===true)) return false;
+    }}
+  }}
+  return true;
+}}
+
+function cell(r, k) {{
+  if(k==='symbol') return `<span class="sym">${{r.symbol}}</span>`;
+  if(k==='name') return `${{r.name}} <span class="cc">${{r.country}}</span>`;
+  if(k==='market') return `<span class="mkt">${{r.market}}</span>`;
+  if(k==='close') return `<span class="num">${{r.close_fmt}}</span>`;
+  if(k==='aligned') return r.aligned ? '<span class="aligned-yes">정배열</span>' : '<span class="no">-</span>';
+  if(k==='high_count') return `<span class="num">${{r.high_count}}</span>`;
+  if(k==='last_date') return `<span class="cc">${{r.last_date}}</span>`;
+  if(k.startsWith('h')) {{
+    const v=r[k];
+    if(v===null) return '<span class="na">·</span>';
+    return v ? '<span class="tag yes">신고가</span>' : '<span class="no">-</span>';
+  }}
+  if(k.startsWith('ma')) {{ const v=r[k]; return `<span class="num">${{v===null?'-':v}}</span>`; }}
+  return '';
+}}
+
+function render() {{
+  let rows = DATA.filter(passFilter);
+  const k=state.sortKey, dir=state.sortDir;
+  rows.sort((a,b)=>{{
+    let av=a[k], bv=b[k];
+    if(k.startsWith('h')||k==='aligned') {{ av=av?1:0; bv=bv?1:0; }}
+    if(k.startsWith('ma')) {{ av=parseFloat((av||'0').toString().replace(/,/g,''))||0; bv=parseFloat((bv||'0').toString().replace(/,/g,''))||0; }}
+    if(k==='close') {{ av=a.close||0; bv=b.close||0; }}
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return (av-bv)*dir;
+  }});
+
+  const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+  const frag=document.createDocumentFragment();
+  rows.forEach(r => {{
+    const tr=document.createElement('tr');
+    tr.innerHTML = COLS.map(c=>`<td${{c.num?' class="num"':''}}>${{cell(r,c.k)}}</td>`).join('');
+    frag.appendChild(tr);
+  }});
+  tbody.appendChild(frag);
+
+  document.getElementById('stats').innerHTML =
+    `표시 <b>${{rows.length}}</b> / 전체 ${{DATA.length}}종목 · 정배열 <b>${{rows.filter(r=>r.aligned).length}}</b>`;
+
+  document.querySelectorAll('#thead th').forEach(th=>{{
+    th.classList.remove('sort-asc','sort-desc','sort-ind');
+    if(th.dataset.k===k) th.classList.add(dir>0?'sort-asc':'sort-desc'); else th.classList.add('sort-ind');
+  }});
+}}
+render();
+</script>
+</body>
+</html>
+"""
