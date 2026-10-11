@@ -78,11 +78,13 @@ def run_screen(cfg: Config) -> pd.DataFrame:
     elif mode == "require_both":
         df = df[df["any_high"] & df["aligned"]]
 
-    # 5) 정렬: 정배열 -> 신고가 충족수 -> (동률이면) 시가총액 순
+    # 5) 정렬: 정배열 -> 신고가 충족수 -> (동률이면) 시가총액(환율 환산 USD) 순
     high_cols = [f"high_{p}w" for p in cfg.high_periods_weeks]
     df["high_count"] = df[high_cols].apply(lambda r: sum(bool(x) for x in r), axis=1)
-    # 시가총액 NaN은 정렬 시 최하위로
-    df["_cap_sort"] = df["marketcap"].fillna(-1)
+    # 원화는 환율로 나눠 달러 기준으로 공통 비교 (NaN은 최하위)
+    usd_krw = float(cfg.usd_krw) if cfg.usd_krw else 1400.0
+    cap = pd.to_numeric(df["marketcap"], errors="coerce")
+    df["_cap_sort"] = cap.where(df["currency"] != "KRW", cap / usd_krw).fillna(-1)
     df = df.sort_values(["aligned", "high_count", "_cap_sort"],
                         ascending=[False, False, False]).reset_index(drop=True)
     df = df.drop(columns=["_cap_sort"])

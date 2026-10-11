@@ -54,9 +54,18 @@ def build_records(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) ->
     sectors = sectors or {}
     high_periods = cfg.high_periods_weeks
     ma_periods = cfg.ma_periods_weeks
+    usd_krw = float(cfg.usd_krw) if cfg.usd_krw else 1400.0
     records = []
     for _, r in df.iterrows():
         sym = str(r["symbol"])
+        cap = None if pd.isna(r.get("marketcap")) else float(r.get("marketcap"))
+        # 공통 통화(USD) 환산 시총: 원화는 환율로 나눔, 달러는 그대로
+        if cap is None:
+            cap_usd = None
+        elif r["currency"] == "KRW":
+            cap_usd = cap / usd_krw
+        else:
+            cap_usd = cap
         rec = {
             "symbol": sym,
             "name": r["name"],
@@ -70,7 +79,8 @@ def build_records(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) ->
             "aligned": bool(r["aligned"]),
             "high_count": int(r["high_count"]),
             "adv": None if pd.isna(r.get("avg_dollar_volume")) else float(r.get("avg_dollar_volume", 0)),
-            "mcap": None if pd.isna(r.get("marketcap")) else float(r.get("marketcap")),
+            "mcap": cap,
+            "mcap_usd": cap_usd,  # 환율 환산 USD 기준 (정렬/비교용)
             "mcap_fmt": _fmt_marketcap(r.get("marketcap"), r["currency"]),
         }
         for p in high_periods:
@@ -84,6 +94,11 @@ def render_html(df: pd.DataFrame, cfg: Config, records: list, server_mode: bool 
     """레코드로 완성된 HTML 문자열 생성."""
     today = datetime.now().strftime("%Y-%m-%d")
     markets = sorted(df["market"].unique().tolist()) if not df.empty else []
+    usd_krw = float(cfg.usd_krw) if cfg.usd_krw else 1400.0
+
+    def krw_label(usd: float) -> str:
+        return _fmt_marketcap(usd * usd_krw, "KRW")
+
     return _TEMPLATE.format(
         today=today,
         total=len(records),
@@ -94,6 +109,11 @@ def render_html(df: pd.DataFrame, cfg: Config, records: list, server_mode: bool 
         data_json=json.dumps(records, ensure_ascii=False),
         include_mode=cfg.include_mode,
         server_mode="true" if server_mode else "false",
+        usd_krw=f"{usd_krw:,.0f}",
+        krw_small=krw_label(3e8),
+        krw_mid=krw_label(2e9),
+        krw_large=krw_label(1e10),
+        krw_mega=krw_label(1e11),
     )
 
 
@@ -213,12 +233,13 @@ _TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </div>
     <div class="ctl">
-      <label>최소 시가총액 (한국=억원 / 미국=백만$)</label>
+      <label>최소 시가총액 (환율 {usd_krw}원 환산 · USD 기준)</label>
       <div class="chips" id="mcapChips">
-        <span class="chip active" data-kr="0" data-us="0">전체</span>
-        <span class="chip" data-kr="3000" data-us="300">소형↑ (KR 3천억 / US 3억$)</span>
-        <span class="chip" data-kr="10000" data-us="2000">중형↑ (KR 1조 / US 20억$)</span>
-        <span class="chip" data-kr="100000" data-us="10000">대형↑ (KR 10조 / US 100억$)</span>
+        <span class="chip active" data-usd="0">전체</span>
+        <span class="chip" data-usd="300000000">3억$↑ (약 {krw_small})</span>
+        <span class="chip" data-usd="2000000000">20억$↑ (약 {krw_mid})</span>
+        <span class="chip" data-usd="10000000000">100억$↑ (약 {krw_large})</span>
+        <span class="chip" data-usd="100000000000">1000억$↑ (약 {krw_mega})</span>
       </div>
     </div>
   </div>
@@ -242,7 +263,7 @@ const SERVER_MODE = {server_mode};  // true면 섹터 입력/저장 활성화 (l
 
 const state = {{ search:"", market:"", sector:"", noSector:false, highs:new Set(), matchMode:"or",
   alignedOnly:false, sortKey:"high_count", sortDir:-1,
-  mcapKr:0, mcapUs:0 }};
+  minCapUsd:0 }};
 
 // symbol -> 섹터 맵 (DATA에서 초기화, 서버 저장과 동기화)
 const SECTORS = {{}};
@@ -315,13 +336,12 @@ document.querySelectorAll('#matchMode .chip').forEach(ch => {{
 const alignChip=document.getElementById('alignChip');
 alignChip.addEventListener('click', ()=>{{ state.alignedOnly=!state.alignedOnly; alignChip.classList.toggle('active'); render(); }});
 
-// 최소 시가총액 칩 (단일 선택). 한국=억원, 미국=백만달러 기준
+// 최소 시가총액 칩 (단일 선택). 달러 환산(USD) 기준 공통 임계값
 document.querySelectorAll('#mcapChips .chip').forEach(ch => {{
   ch.addEventListener('click', ()=>{{
     document.querySelectorAll('#mcapChips .chip').forEach(x=>x.classList.remove('active'));
     ch.classList.add('active');
-    state.mcapKr = parseFloat(ch.dataset.kr) * 1e8;   // 억원 -> 원
-    state.mcapUs = parseFloat(ch.dataset.us) * 1e6;   // 백만달러 -> 달러
+    state.minCapUsd = parseFloat(ch.dataset.usd) || 0;
     render();
   }});
 }});
@@ -372,10 +392,9 @@ function passFilter(r) {{
       if(!sel.every(p => r['h'+p]===true)) return false;
     }}
   }}
-  // 최소 시가총액 필터 (통화별 임계값 적용). 시총 없는 종목은 임계값>0일 때 제외
-  const minCap = (r.currency==='KRW') ? state.mcapKr : state.mcapUs;
-  if(minCap>0) {{
-    if(r.mcap===null || r.mcap < minCap) return false;
+  // 최소 시가총액 필터 (달러 환산 USD 기준). 시총 없는 종목은 임계값>0일 때 제외
+  if(state.minCapUsd>0) {{
+    if(r.mcap_usd==null || r.mcap_usd < state.minCapUsd) return false;
   }}
   return true;
 }}
@@ -409,7 +428,8 @@ function render() {{
     let av=a[k], bv=b[k];
     if(k.startsWith('h')||k==='aligned') {{ av=av?1:0; bv=bv?1:0; }}
     if(k==='close') {{ av=a.close||0; bv=b.close||0; }}
-    if(k==='mcap') {{ av=a.mcap||0; bv=b.mcap||0; }}
+    // 시가총액은 환율 환산(USD) 값으로 비교
+    if(k==='mcap') {{ av=(a.mcap_usd==null?-1:a.mcap_usd); bv=(b.mcap_usd==null?-1:b.mcap_usd); }}
     if(k==='sector') {{ av=(SECTORS[a.symbol]||''); bv=(SECTORS[b.symbol]||''); }}
     if(typeof av==='string') return av.localeCompare(bv)*dir;
     return (av-bv)*dir;

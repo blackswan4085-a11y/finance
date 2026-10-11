@@ -6,5 +6,6 @@ run.log
 server.log
 out.html
 _test_server.py
+_verify.py
 # 섹터는 개인 데이터이므로 커밋하지 않음 (각자 PC에서 생성/유지)
 sectors.json

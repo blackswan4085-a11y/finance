@@ -45,3 +45,6 @@ use_cache: true
 # 웹서버 (python run.py 실행 시 localhost 서버로 리포트 제공)
 port: 8000              # 서버 포트
 auto_open: true         # 실행 시 브라우저 자동 열기
+
+# 환율: 시가총액 정렬 시 원화를 달러로 환산해 공통 비교하기 위한 기준 (1달러 = N원)
+usd_krw: 1400

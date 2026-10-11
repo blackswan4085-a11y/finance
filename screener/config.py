@@ -35,6 +35,7 @@ class Config:
     use_cache: bool = True
     port: int = 8000
     auto_open: bool = True
+    usd_krw: float = 1400.0
 
     base_dir: str = "."
 
