@@ -36,8 +36,18 @@ def _fetch_one(symbol: str, start: str, sleep: float) -> Optional[pd.DataFrame]:
     return None
 
 
+def _fetched_today(path: str) -> bool:
+    """캐시 파일을 오늘 저장(갱신)했는지 여부. 파일 수정시각 기준."""
+    try:
+        mtime = datetime.fromtimestamp(os.path.getmtime(path)).date()
+        return mtime == datetime.now().date()
+    except OSError:
+        return False
+
+
 def _load_or_update(symbol: str, start: str, cache_dir: str, use_cache: bool,
-                    sleep: float) -> Optional[pd.DataFrame]:
+                    sleep: float):
+    """반환: (DataFrame|None, status) — status in {'cache','update','new','fail'}."""
     path = _cache_file(cache_dir, symbol)
     cached: Optional[pd.DataFrame] = None
     if use_cache and os.path.exists(path):
@@ -47,27 +57,29 @@ def _load_or_update(symbol: str, start: str, cache_dir: str, use_cache: bool,
         except Exception:  # noqa: BLE001
             cached = None
 
-    today = datetime.now().date()
     if cached is not None and not cached.empty:
+        # 오늘 이미 받은 캐시면 네트워크 없이 즉시 재사용
+        # (주말/공휴일/장중이라 '최근 거래일'이 어제보다 과거여도 그날 한 번만 받으면 됨)
+        if use_cache and _fetched_today(path):
+            return cached, "cache"
+        # 그 외: 증분 업데이트 (마지막 거래일 며칠 전부터 다시 받아 병합)
         last = cached.index.max().date()
-        # 캐시가 오늘(또는 어제 이후)까지면 재사용
-        if last >= today - timedelta(days=1):
-            return cached
-        # 증분 업데이트: 마지막 날짜부터 다시 받아 병합
         inc_start = (last - timedelta(days=5)).strftime("%Y-%m-%d")
         fresh = _fetch_one(symbol, inc_start, sleep)
         if fresh is not None:
             merged = pd.concat([cached, fresh])
             merged = merged[~merged.index.duplicated(keep="last")].sort_index()
-            _save(merged, path)
-            return merged
-        return cached
+            _save(merged, path)   # 저장 -> mtime 갱신 -> 오늘 다시 실행 시 재사용됨
+            return merged, "update"
+        # 네트워크 실패해도 기존 캐시 반환 (단, mtime은 그대로라 다음 시도 때 재시도)
+        return cached, "cache"
 
     # 캐시 없음 -> 전체 다운로드
     fresh = _fetch_one(symbol, start, sleep)
     if fresh is not None:
         _save(fresh, path)
-    return fresh
+        return fresh, "new"
+    return None, "fail"
 
 
 def _save(df: pd.DataFrame, path: str) -> None:
@@ -97,12 +109,17 @@ def download_all(symbols, cfg, label: str = "다운로드") -> Dict[str, pd.Data
     results: Dict[str, pd.DataFrame] = {}
 
     def task(sym):
-        return sym, _load_or_update(sym, start, cfg.cache_path, cfg.use_cache, cfg.request_sleep)
+        df, status = _load_or_update(sym, start, cfg.cache_path, cfg.use_cache, cfg.request_sleep)
+        return sym, df, status
 
+    counts = {"cache": 0, "update": 0, "new": 0, "fail": 0}
     with ThreadPoolExecutor(max_workers=cfg.max_workers) as ex:
         futs = [ex.submit(task, s) for s in symbols]
         for fut in tqdm(as_completed(futs), total=len(futs), desc=label, ncols=80):
-            sym, df = fut.result()
+            sym, df, status = fut.result()
+            counts[status] = counts.get(status, 0) + 1
             if df is not None and not df.empty:
                 results[sym] = df
+    print(f"[data] 캐시재사용 {counts['cache']} · 갱신 {counts['update']} · "
+          f"신규 {counts['new']} · 실패 {counts['fail']}")
     return results
