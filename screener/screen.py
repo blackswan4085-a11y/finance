@@ -78,9 +78,12 @@ def run_screen(cfg: Config) -> pd.DataFrame:
     elif mode == "require_both":
         df = df[df["any_high"] & df["aligned"]]
 
-    # 5) 정렬: 정배열 + 신고가 많이 충족한 순
+    # 5) 정렬: 정배열 -> 신고가 충족수 -> (동률이면) 시가총액 순
     high_cols = [f"high_{p}w" for p in cfg.high_periods_weeks]
     df["high_count"] = df[high_cols].apply(lambda r: sum(bool(x) for x in r), axis=1)
-    df = df.sort_values(["aligned", "high_count", "avg_dollar_volume"],
+    # 시가총액 NaN은 정렬 시 최하위로
+    df["_cap_sort"] = df["marketcap"].fillna(-1)
+    df = df.sort_values(["aligned", "high_count", "_cap_sort"],
                         ascending=[False, False, False]).reset_index(drop=True)
+    df = df.drop(columns=["_cap_sort"])
     return df

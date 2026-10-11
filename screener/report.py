@@ -175,6 +175,11 @@ _TEMPLATE = r"""<!DOCTYPE html>
       <select id="marketSel"><option value="">전체</option></select>
     </div>
     <div class="ctl">
+      <label>섹터 (직접 입력 · 과거 입력값 자동완성)</label>
+      <input id="sectorInput" type="text" list="sectorList" placeholder="예: Technology, 반도체..."/>
+      <datalist id="sectorList"></datalist>
+    </div>
+    <div class="ctl">
       <label>신고가 조건 (선택한 것만, OR/AND 전환 가능)</label>
       <div class="chips" id="highChips"></div>
     </div>
@@ -217,7 +222,7 @@ const HIGHS = {high_periods};
 const MAS = {ma_periods};
 const MARKETS = {markets};
 
-const state = {{ search:"", market:"", highs:new Set(), matchMode:"or",
+const state = {{ search:"", market:"", sector:"", highs:new Set(), matchMode:"or",
   alignedOnly:false, sortKey:"high_count", sortDir:-1,
   mcapKr:0, mcapUs:0 }};
 
@@ -227,6 +232,40 @@ MARKETS.forEach(m => {{ const o=document.createElement('option'); o.value=m; o.t
 marketSel.addEventListener('change', e => {{ state.market=e.target.value; render(); }});
 
 document.getElementById('search').addEventListener('input', e => {{ state.search=e.target.value.toLowerCase(); render(); }});
+
+// ---- 섹터 입력 + 과거 입력값 기억(localStorage) ----
+const SECTOR_STORE_KEY = 'screener_sector_history';
+const sectorInput = document.getElementById('sectorInput');
+const sectorList = document.getElementById('sectorList');
+
+function loadSectorHistory() {{
+  try {{ return JSON.parse(localStorage.getItem(SECTOR_STORE_KEY)) || []; }}
+  catch(e) {{ return []; }}
+}}
+function saveSectorHistory(arr) {{
+  try {{ localStorage.setItem(SECTOR_STORE_KEY, JSON.stringify(arr.slice(0, 50))); }} catch(e) {{}}
+}}
+function rememberSector(val) {{
+  val = (val || '').trim();
+  if(!val) return;
+  let hist = loadSectorHistory();
+  // 중복 제거 후 맨 앞에 추가 (대소문자 무시 비교)
+  hist = hist.filter(s => s.toLowerCase() !== val.toLowerCase());
+  hist.unshift(val);
+  saveSectorHistory(hist);
+  renderSectorOptions();
+}}
+function renderSectorOptions() {{
+  // 내가 과거에 직접 입력한 섹터 목록만 드롭다운으로 표시 (브라우저에 저장됨)
+  const hist = loadSectorHistory();
+  sectorList.innerHTML = hist.map(s => `<option value="${{s.replace(/"/g,'&quot;')}}"></option>`).join('');
+}}
+renderSectorOptions();
+
+sectorInput.addEventListener('input', e => {{ state.sector = e.target.value.trim().toLowerCase(); render(); }});
+// 입력 확정 시(엔터/포커스 아웃) 과거 목록에 저장
+sectorInput.addEventListener('change', e => rememberSector(e.target.value));
+sectorInput.addEventListener('keydown', e => {{ if(e.key === 'Enter') rememberSector(e.target.value); }});
 
 const highChips = document.getElementById('highChips');
 HIGHS.forEach(p => {{
@@ -265,7 +304,6 @@ const COLS = [
 ];
 HIGHS.forEach(p => COLS.push({{k:'h'+p, t:p+'주신고가'}}));
 COLS.push({{k:'aligned', t:'정배열'}});
-MAS.forEach(p => COLS.push({{k:'ma'+p, t:'MA'+p+'주', num:true}}));
 COLS.push({{k:'high_count', t:'충족수', num:true}});
 COLS.push({{k:'last_date', t:'기준주'}});
 
@@ -287,6 +325,9 @@ function passFilter(r) {{
   if(state.search) {{
     const s=(r.name+' '+r.symbol).toLowerCase();
     if(!s.includes(state.search)) return false;
+  }}
+  if(state.sector) {{
+    if(!(r.sector||'').toLowerCase().includes(state.sector)) return false;
   }}
   if(state.highs.size>0) {{
     const sel=[...state.highs];
