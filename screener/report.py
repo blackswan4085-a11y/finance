@@ -149,19 +149,39 @@ _TEMPLATE = r"""<!DOCTYPE html>
   header h1 {{ margin:0 0 4px; font-size:20px; }}
   header .sub {{ color:var(--muted); font-size:13px; }}
   .wrap {{ padding:16px 24px 60px; }}
-  .controls {{ background:var(--panel); border:1px solid var(--border); border-radius:10px;
-    padding:14px 16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; }}
-  .ctl {{ display:flex; flex-direction:column; gap:6px; }}
-  .ctl label {{ font-size:12px; color:var(--muted); }}
-  .ctl input[type=text], .ctl select {{ background:var(--panel2); border:1px solid var(--border);
-    color:var(--text); padding:7px 10px; border-radius:6px; font-size:13px; min-width:150px; }}
-  .chips {{ display:flex; flex-wrap:wrap; gap:8px; }}
-  .chip {{ user-select:none; cursor:pointer; padding:6px 11px; border-radius:20px;
-    border:1px solid var(--border); background:var(--panel2); color:var(--muted); font-size:12px; }}
+  .controls {{ background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px 20px; margin-bottom:16px;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:16px 20px;
+    align-items:start; }}
+  .ctl {{ display:flex; flex-direction:column; gap:7px; min-width:0; }}
+  .ctl.wide {{ grid-column:1 / -1; }}
+  .ctl label {{ font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.02em;
+    text-transform:uppercase; }}
+  /* 입력/셀렉트 공통: 높이·여백 통일 */
+  .ctl input[type=text], .ctl select {{ height:38px; width:100%;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:0 12px; border-radius:8px; font-size:13px; transition:border-color .15s, box-shadow .15s; }}
+  .ctl input[type=text]::placeholder {{ color:#5c6b7e; }}
+  .ctl input[type=text]:hover, .ctl select:hover {{ border-color:#3a4a5f; }}
+  .ctl input[type=text]:focus, .ctl select:focus {{ outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(74,158,255,.15); }}
+  /* 네이티브 select 화살표 제거 후 커스텀 화살표 */
+  .ctl select {{ appearance:none; -webkit-appearance:none; -moz-appearance:none; cursor:pointer;
+    padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b98a9' d='M6 8.5L1.5 4h9z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; }}
+  .ctl select option {{ background:#1a2230; color:var(--text); }}
+  .chips {{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:38px; }}
+  .chip {{ user-select:none; cursor:pointer; padding:8px 13px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel2); color:var(--muted);
+    font-size:12.5px; line-height:1; transition:all .12s; white-space:nowrap; }}
+  .chip:hover {{ border-color:#3a4a5f; color:var(--text); }}
   .chip.active {{ background:var(--accent); color:#fff; border-color:var(--accent); }}
-  .chip.green.active {{ background:var(--green); border-color:var(--green); }}
-  .match-mode {{ display:flex; gap:6px; }}
-  .match-mode .chip.active {{ background:var(--amber); border-color:var(--amber); color:#111; }}
+  .chip.green.active {{ background:var(--green); border-color:var(--green); color:#06231a; }}
+  .match-mode {{ display:inline-flex; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; }}
+  .match-mode .chip {{ border:none; border-radius:0; }}
+  .match-mode .chip + .chip {{ border-left:1px solid var(--border); }}
+  .match-mode .chip.active {{ background:var(--amber); border-color:var(--amber); color:#241a00; }}
   .stats {{ color:var(--muted); font-size:13px; margin:0 0 10px; }}
   .stats b {{ color:var(--text); }}
   table {{ width:100%; border-collapse:collapse; background:var(--panel); border-radius:10px; overflow:hidden; }}
@@ -182,8 +202,11 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .cc {{ font-size:11px; color:var(--muted); }}
   footer {{ color:#55606f; font-size:12px; padding:16px 24px; }}
   .sector-edit {{ background:#172030; border:1px solid var(--border); color:var(--text);
-    padding:4px 7px; border-radius:5px; font-size:12px; width:130px; }}
-  .sector-edit:focus {{ outline:none; border-color:var(--accent); background:#1b2740; }}
+    padding:5px 9px; border-radius:6px; font-size:12px; width:120px; transition:border-color .12s; }}
+  .sector-edit::placeholder {{ color:#4e5c6e; }}
+  .sector-edit:hover {{ border-color:#3a4a5f; }}
+  .sector-edit:focus {{ outline:none; border-color:var(--accent); background:#1b2740;
+    box-shadow:0 0 0 2px rgba(74,158,255,.15); }}
   .sort-ind::after {{ content:" \25B4\25BE"; color:#3a4451; font-size:9px; }}
   th.sort-asc::after {{ content:" \25B4"; color:var(--accent); }}
   th.sort-desc::after {{ content:" \25BE"; color:var(--accent); }}
@@ -215,8 +238,8 @@ _TEMPLATE = r"""<!DOCTYPE html>
         <span class="chip" id="noSectorChip">미기입만 보기</span>
       </div>
     </div>
-    <div class="ctl">
-      <label>신고가 조건 (선택한 것만, OR/AND 전환 가능)</label>
+    <div class="ctl wide">
+      <label>신고가 조건 (선택한 것만 · OR/AND 전환 가능)</label>
       <div class="chips" id="highChips"></div>
     </div>
     <div class="ctl">
@@ -232,7 +255,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
         <span class="chip green" id="alignChip">정배열만 보기</span>
       </div>
     </div>
-    <div class="ctl">
+    <div class="ctl wide">
       <label>최소 시가총액 (환율 {usd_krw}원 환산 · USD 기준)</label>
       <div class="chips" id="mcapChips">
         <span class="chip active" data-usd="0">전체</span>
