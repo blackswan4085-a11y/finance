@@ -73,6 +73,52 @@ def _krx_listing(market: str) -> pd.DataFrame:
     return out
 
 
+# 미국 시가총액 캐시 (Nasdaq 스크리너 API, 1회 호출로 전종목)
+_us_marketcap: Optional[dict] = None
+
+
+def _load_us_marketcap() -> dict:
+    """Nasdaq 스크리너 API에서 미국 전종목 시가총액을 한 번에 받아 {symbol: marketcap(float)}.
+
+    API 키 불필요. 심볼 표기 차이를 흡수하기 위해 점/하이픈을 제거한 키도 함께 등록한다.
+    (예: BRK/A, BRK.B 등)
+    """
+    global _us_marketcap
+    if _us_marketcap is not None:
+        return _us_marketcap
+    url = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=10000&download=true"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "en-US",
+    }
+    cap: dict = {}
+    try:
+        r = requests.get(url, headers=headers, timeout=40)
+        r.raise_for_status()
+        rows = r.json().get("data", {}).get("rows") or []
+        for row in rows:
+            sym = (row.get("symbol") or "").strip().upper()
+            raw = row.get("marketCap")
+            if not sym or raw in (None, "", "0", "0.00"):
+                continue
+            try:
+                val = float(str(raw).replace(",", ""))
+            except (TypeError, ValueError):
+                continue
+            if val <= 0:
+                continue
+            cap[sym] = val
+            # 심볼 표기 정규화 키 추가 (영숫자만)
+            norm = "".join(ch for ch in sym if ch.isalnum())
+            if norm != sym:
+                cap.setdefault(norm, val)
+    except Exception as e:  # noqa: BLE001
+        print(f"[universe] 미국 시가총액 로드 실패(무시하고 진행): {e}")
+    _us_marketcap = cap
+    return cap
+
+
 def _normalize(df: pd.DataFrame, market: str) -> pd.DataFrame:
     """다양한 StockListing 결과를 공통 스키마로 정리.
 
@@ -92,6 +138,12 @@ def _normalize(df: pd.DataFrame, market: str) -> pd.DataFrame:
     # 섹터 정보가 있으면 보존
     sec_col = cols.get("sector") or cols.get("industry")
     out["sector"] = df[sec_col].astype(str) if sec_col else ""
+    # 시가총액: 한국 캐시 CSV의 Marcap(원 단위)이 있으면 보존, 없으면 NaN(미국은 나중에 채움)
+    cap_col = cols.get("marcap") or cols.get("marketcap")
+    if cap_col:
+        out["marketcap"] = pd.to_numeric(df[cap_col], errors="coerce")
+    else:
+        out["marketcap"] = pd.NA
     out = out.dropna(subset=["symbol"]).drop_duplicates(subset=["symbol"])
     return out
 
@@ -119,9 +171,25 @@ def build_universe(markets: List[str]) -> pd.DataFrame:
             print(f"[universe] {m} 결과 없음")
             continue
         norm = _normalize(raw, m)
-        print(f"[universe] {m}: {len(norm)} 종목")
+        # 미국 시장은 Nasdaq 스크리너 API 시총으로 채움
+        meta = MARKET_META.get(m, {})
+        if meta.get("country") == "US":
+            cap = _load_us_marketcap()
+            if cap:
+                norm["marketcap"] = norm["symbol"].map(
+                    lambda s: cap.get(str(s).upper())
+                    or cap.get("".join(ch for ch in str(s).upper() if ch.isalnum()))
+                )
+                filled = int(norm["marketcap"].notna().sum())
+                print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
+            else:
+                print(f"[universe] {m}: {len(norm)} 종목 (시총 소스 실패)")
+        else:
+            filled = int(norm["marketcap"].notna().sum())
+            print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
         frames.append(norm)
     if not frames:
-        return pd.DataFrame(columns=["symbol", "name", "market", "country", "currency", "sector"])
+        return pd.DataFrame(
+            columns=["symbol", "name", "market", "country", "currency", "sector", "marketcap"])
     uni = pd.concat(frames, ignore_index=True)
     return uni

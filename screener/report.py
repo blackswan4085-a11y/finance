@@ -22,6 +22,33 @@ def _fmt_num(v, currency: str) -> str:
         return str(v)
 
 
+def _fmt_marketcap(v, currency: str) -> str:
+    """시가총액 축약 표시. 한국(KRW)=조/억, 그 외=T/B/M."""
+    if v is None or (isinstance(v, float) and pd.isna(v)) or v == 0:
+        return "-"
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return "-"
+    if currency == "KRW":
+        jo = 1_0000_0000_0000  # 조
+        eok = 1_0000_0000      # 억
+        if v >= jo:
+            return f"{v/jo:,.1f}조"
+        if v >= eok:
+            return f"{v/eok:,.0f}억"
+        return f"{v:,.0f}"
+    # USD 등
+    t, b, m = 1e12, 1e9, 1e6
+    if v >= t:
+        return f"${v/t:,.2f}T"
+    if v >= b:
+        return f"${v/b:,.2f}B"
+    if v >= m:
+        return f"${v/m:,.0f}M"
+    return f"${v:,.0f}"
+
+
 def build_report(df: pd.DataFrame, cfg: Config) -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     out_file = os.path.join(cfg.output_path, f"report_{today}.html")
@@ -45,6 +72,8 @@ def build_report(df: pd.DataFrame, cfg: Config) -> str:
             "aligned": bool(r["aligned"]),
             "high_count": int(r["high_count"]),
             "adv": None if pd.isna(r.get("avg_dollar_volume")) else float(r.get("avg_dollar_volume", 0)),
+            "mcap": None if pd.isna(r.get("marketcap")) else float(r.get("marketcap")),
+            "mcap_fmt": _fmt_marketcap(r.get("marketcap"), r["currency"]),
         }
         for p in high_periods:
             v = r.get(f"high_{p}w")
@@ -162,6 +191,15 @@ _TEMPLATE = r"""<!DOCTYPE html>
         <span class="chip green" id="alignChip">정배열만 보기</span>
       </div>
     </div>
+    <div class="ctl">
+      <label>최소 시가총액 (한국=억원 / 미국=백만$)</label>
+      <div class="chips" id="mcapChips">
+        <span class="chip active" data-kr="0" data-us="0">전체</span>
+        <span class="chip" data-kr="3000" data-us="300">소형↑ (KR 3천억 / US 3억$)</span>
+        <span class="chip" data-kr="10000" data-us="2000">중형↑ (KR 1조 / US 20억$)</span>
+        <span class="chip" data-kr="100000" data-us="10000">대형↑ (KR 10조 / US 100억$)</span>
+      </div>
+    </div>
   </div>
 
   <p class="stats" id="stats"></p>
@@ -180,7 +218,8 @@ const MAS = {ma_periods};
 const MARKETS = {markets};
 
 const state = {{ search:"", market:"", highs:new Set(), matchMode:"or",
-  alignedOnly:false, sortKey:"high_count", sortDir:-1 }};
+  alignedOnly:false, sortKey:"high_count", sortDir:-1,
+  mcapKr:0, mcapUs:0 }};
 
 // ---- 컨트롤 구성 ----
 const marketSel = document.getElementById('marketSel');
@@ -207,10 +246,22 @@ document.querySelectorAll('#matchMode .chip').forEach(ch => {{
 const alignChip=document.getElementById('alignChip');
 alignChip.addEventListener('click', ()=>{{ state.alignedOnly=!state.alignedOnly; alignChip.classList.toggle('active'); render(); }});
 
+// 최소 시가총액 칩 (단일 선택). 한국=억원, 미국=백만달러 기준
+document.querySelectorAll('#mcapChips .chip').forEach(ch => {{
+  ch.addEventListener('click', ()=>{{
+    document.querySelectorAll('#mcapChips .chip').forEach(x=>x.classList.remove('active'));
+    ch.classList.add('active');
+    state.mcapKr = parseFloat(ch.dataset.kr) * 1e8;   // 억원 -> 원
+    state.mcapUs = parseFloat(ch.dataset.us) * 1e6;   // 백만달러 -> 달러
+    render();
+  }});
+}});
+
 // ---- 테이블 헤더 ----
 const COLS = [
   {{k:'symbol', t:'코드'}}, {{k:'name', t:'종목명'}}, {{k:'market', t:'시장'}},
   {{k:'close', t:'종가', num:true}},
+  {{k:'mcap', t:'시가총액', num:true}},
 ];
 HIGHS.forEach(p => COLS.push({{k:'h'+p, t:p+'주신고가'}}));
 COLS.push({{k:'aligned', t:'정배열'}});
@@ -245,6 +296,11 @@ function passFilter(r) {{
       if(!sel.every(p => r['h'+p]===true)) return false;
     }}
   }}
+  // 최소 시가총액 필터 (통화별 임계값 적용). 시총 없는 종목은 임계값>0일 때 제외
+  const minCap = (r.currency==='KRW') ? state.mcapKr : state.mcapUs;
+  if(minCap>0) {{
+    if(r.mcap===null || r.mcap < minCap) return false;
+  }}
   return true;
 }}
 
@@ -253,6 +309,7 @@ function cell(r, k) {{
   if(k==='name') return `${{r.name}} <span class="cc">${{r.country}}</span>`;
   if(k==='market') return `<span class="mkt">${{r.market}}</span>`;
   if(k==='close') return `<span class="num">${{r.close_fmt}}</span>`;
+  if(k==='mcap') return `<span class="num">${{r.mcap_fmt}}</span>`;
   if(k==='aligned') return r.aligned ? '<span class="aligned-yes">정배열</span>' : '<span class="no">-</span>';
   if(k==='high_count') return `<span class="num">${{r.high_count}}</span>`;
   if(k==='last_date') return `<span class="cc">${{r.last_date}}</span>`;
@@ -273,6 +330,7 @@ function render() {{
     if(k.startsWith('h')||k==='aligned') {{ av=av?1:0; bv=bv?1:0; }}
     if(k.startsWith('ma')) {{ av=parseFloat((av||'0').toString().replace(/,/g,''))||0; bv=parseFloat((bv||'0').toString().replace(/,/g,''))||0; }}
     if(k==='close') {{ av=a.close||0; bv=b.close||0; }}
+    if(k==='mcap') {{ av=a.mcap||0; bv=b.mcap||0; }}
     if(typeof av==='string') return av.localeCompare(bv)*dir;
     return (av-bv)*dir;
   }});

@@ -24,6 +24,7 @@ def run_screen(cfg: Config) -> pd.DataFrame:
     country_map = dict(zip(uni["symbol"], uni["country"]))
     currency_map = dict(zip(uni["symbol"], uni["currency"]))
     sector_map = dict(zip(uni["symbol"], uni.get("sector", pd.Series("", index=uni.index))))
+    cap_map = dict(zip(uni["symbol"], uni.get("marketcap", pd.Series(pd.NA, index=uni.index))))
 
     # 2) 데이터 다운로드 (일봉, 캐시)
     data = download_all(list(uni["symbol"]), cfg, label="OHLCV")
@@ -53,6 +54,7 @@ def run_screen(cfg: Config) -> pd.DataFrame:
             "aligned": sig["aligned"],
             "any_high": sig["any_high"],
             "avg_dollar_volume": sig["avg_dollar_volume"],
+            "marketcap": cap_map.get(sym),
         }
         for p in cfg.high_periods_weeks:
             row[f"high_{p}w"] = sig["highs"].get(p)
@@ -63,6 +65,9 @@ def run_screen(cfg: Config) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     if df.empty:
         return df
+
+    # 시가총액 숫자화 (정렬/필터용). 없으면 NaN
+    df["marketcap"] = pd.to_numeric(df["marketcap"], errors="coerce")
 
     # 4) 포함 기준 필터
     mode = cfg.include_mode
