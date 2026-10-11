@@ -49,23 +49,21 @@ def _fmt_marketcap(v, currency: str) -> str:
     return f"${v:,.0f}"
 
 
-def build_report(df: pd.DataFrame, cfg: Config) -> str:
-    today = datetime.now().strftime("%Y-%m-%d")
-    out_file = os.path.join(cfg.output_path, f"report_{today}.html")
-
+def build_records(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) -> list:
+    """DataFrame을 JS용 레코드 리스트로 변환. sectors(={symbol:섹터})가 있으면 반영."""
+    sectors = sectors or {}
     high_periods = cfg.high_periods_weeks
     ma_periods = cfg.ma_periods_weeks
-
-    # 레코드를 JS에서 다룰 JSON으로 직렬화
     records = []
     for _, r in df.iterrows():
+        sym = str(r["symbol"])
         rec = {
-            "symbol": r["symbol"],
+            "symbol": sym,
             "name": r["name"],
             "market": r["market"],
             "country": r["country"],
             "currency": r["currency"],
-            "sector": r.get("sector", ""),
+            "sector": sectors.get(sym, "") or (r.get("sector", "") or ""),
             "last_date": r["last_date"],
             "close": None if pd.isna(r["close"]) else float(r["close"]),
             "close_fmt": _fmt_num(r["close"], r["currency"]),
@@ -78,24 +76,33 @@ def build_report(df: pd.DataFrame, cfg: Config) -> str:
         for p in high_periods:
             v = r.get(f"high_{p}w")
             rec[f"h{p}"] = (None if v is None or (isinstance(v, float) and pd.isna(v)) else bool(v))
-        for p in ma_periods:
-            v = r.get(f"ma_{p}w")
-            rec[f"ma{p}"] = (None if v is None or (isinstance(v, float) and pd.isna(v))
-                            else _fmt_num(v, r["currency"]))
         records.append(rec)
+    return records
 
-    data_json = json.dumps(records, ensure_ascii=False)
+
+def render_html(df: pd.DataFrame, cfg: Config, records: list, server_mode: bool = False) -> str:
+    """레코드로 완성된 HTML 문자열 생성."""
+    today = datetime.now().strftime("%Y-%m-%d")
     markets = sorted(df["market"].unique().tolist()) if not df.empty else []
-    html = _TEMPLATE.format(
+    return _TEMPLATE.format(
         today=today,
         total=len(records),
         aligned_count=int(df["aligned"].sum()) if not df.empty else 0,
-        high_periods=json.dumps(high_periods),
-        ma_periods=json.dumps(ma_periods),
+        high_periods=json.dumps(cfg.high_periods_weeks),
+        ma_periods=json.dumps(cfg.ma_periods_weeks),
         markets=json.dumps(markets, ensure_ascii=False),
-        data_json=data_json,
+        data_json=json.dumps(records, ensure_ascii=False),
         include_mode=cfg.include_mode,
+        server_mode="true" if server_mode else "false",
     )
+
+
+def build_report(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) -> str:
+    """정적 HTML 파일로 저장 (서버 없이 보기용)."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    out_file = os.path.join(cfg.output_path, f"report_{today}.html")
+    records = build_records(df, cfg, sectors)
+    html = render_html(df, cfg, records, server_mode=False)
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(html)
     return out_file
@@ -154,6 +161,9 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .sym {{ font-weight:600; }}
   .cc {{ font-size:11px; color:var(--muted); }}
   footer {{ color:#55606f; font-size:12px; padding:16px 24px; }}
+  .sector-edit {{ background:#172030; border:1px solid var(--border); color:var(--text);
+    padding:4px 7px; border-radius:5px; font-size:12px; width:130px; }}
+  .sector-edit:focus {{ outline:none; border-color:var(--accent); background:#1b2740; }}
   .sort-ind::after {{ content:" \25B4\25BE"; color:#3a4451; font-size:9px; }}
   th.sort-asc::after {{ content:" \25B4"; color:var(--accent); }}
   th.sort-desc::after {{ content:" \25BE"; color:var(--accent); }}
@@ -175,9 +185,15 @@ _TEMPLATE = r"""<!DOCTYPE html>
       <select id="marketSel"><option value="">전체</option></select>
     </div>
     <div class="ctl">
-      <label>섹터 (직접 입력 · 과거 입력값 자동완성)</label>
-      <input id="sectorInput" type="text" list="sectorList" placeholder="예: Technology, 반도체..."/>
+      <label>섹터 필터 (입력한 섹터로 거르기)</label>
+      <input id="sectorInput" type="text" list="sectorList" placeholder="예: 반도체, 2차전지..."/>
       <datalist id="sectorList"></datalist>
+    </div>
+    <div class="ctl">
+      <label>섹터 미기입</label>
+      <div class="chips">
+        <span class="chip" id="noSectorChip">미기입만 보기</span>
+      </div>
     </div>
     <div class="ctl">
       <label>신고가 조건 (선택한 것만, OR/AND 전환 가능)</label>
@@ -222,9 +238,15 @@ const HIGHS = {high_periods};
 const MAS = {ma_periods};
 const MARKETS = {markets};
 
-const state = {{ search:"", market:"", sector:"", highs:new Set(), matchMode:"or",
+const SERVER_MODE = {server_mode};  // true면 섹터 입력/저장 활성화 (localhost 서버)
+
+const state = {{ search:"", market:"", sector:"", noSector:false, highs:new Set(), matchMode:"or",
   alignedOnly:false, sortKey:"high_count", sortDir:-1,
   mcapKr:0, mcapUs:0 }};
+
+// symbol -> 섹터 맵 (DATA에서 초기화, 서버 저장과 동기화)
+const SECTORS = {{}};
+DATA.forEach(r => {{ if(r.sector) SECTORS[r.symbol] = r.sector; }});
 
 // ---- 컨트롤 구성 ----
 const marketSel = document.getElementById('marketSel');
@@ -233,39 +255,47 @@ marketSel.addEventListener('change', e => {{ state.market=e.target.value; render
 
 document.getElementById('search').addEventListener('input', e => {{ state.search=e.target.value.toLowerCase(); render(); }});
 
-// ---- 섹터 입력 + 과거 입력값 기억(localStorage) ----
-const SECTOR_STORE_KEY = 'screener_sector_history';
+// ---- 섹터 필터 입력 + 드롭다운(이미 입력한 섹터 목록) ----
 const sectorInput = document.getElementById('sectorInput');
 const sectorList = document.getElementById('sectorList');
 
-function loadSectorHistory() {{
-  try {{ return JSON.parse(localStorage.getItem(SECTOR_STORE_KEY)) || []; }}
-  catch(e) {{ return []; }}
-}}
-function saveSectorHistory(arr) {{
-  try {{ localStorage.setItem(SECTOR_STORE_KEY, JSON.stringify(arr.slice(0, 50))); }} catch(e) {{}}
-}}
-function rememberSector(val) {{
-  val = (val || '').trim();
-  if(!val) return;
-  let hist = loadSectorHistory();
-  // 중복 제거 후 맨 앞에 추가 (대소문자 무시 비교)
-  hist = hist.filter(s => s.toLowerCase() !== val.toLowerCase());
-  hist.unshift(val);
-  saveSectorHistory(hist);
-  renderSectorOptions();
+function uniqueSectors() {{
+  // 현재 저장된 섹터 값들의 고유 목록 (대소문자 무시 중복 제거)
+  const seen = new Set(); const out = [];
+  Object.values(SECTORS).forEach(s => {{
+    s = (s||'').trim(); if(!s) return;
+    const k = s.toLowerCase();
+    if(!seen.has(k)) {{ seen.add(k); out.push(s); }}
+  }});
+  out.sort((a,b)=>a.localeCompare(b));
+  return out;
 }}
 function renderSectorOptions() {{
-  // 내가 과거에 직접 입력한 섹터 목록만 드롭다운으로 표시 (브라우저에 저장됨)
-  const hist = loadSectorHistory();
-  sectorList.innerHTML = hist.map(s => `<option value="${{s.replace(/"/g,'&quot;')}}"></option>`).join('');
+  sectorList.innerHTML = uniqueSectors()
+    .map(s => `<option value="${{s.replace(/"/g,'&quot;')}}"></option>`).join('');
 }}
 renderSectorOptions();
 
 sectorInput.addEventListener('input', e => {{ state.sector = e.target.value.trim().toLowerCase(); render(); }});
-// 입력 확정 시(엔터/포커스 아웃) 과거 목록에 저장
-sectorInput.addEventListener('change', e => rememberSector(e.target.value));
-sectorInput.addEventListener('keydown', e => {{ if(e.key === 'Enter') rememberSector(e.target.value); }});
+
+// 미기입만 보기 토글
+const noSectorChip = document.getElementById('noSectorChip');
+noSectorChip.addEventListener('click', ()=>{{
+  state.noSector = !state.noSector; noSectorChip.classList.toggle('active'); render();
+}});
+
+// ---- 서버에 섹터 저장 ----
+async function saveSector(symbol, sector) {{
+  SECTORS[symbol] = sector;  // 로컬 즉시 반영
+  renderSectorOptions();
+  if(!SERVER_MODE) return;
+  try {{
+    await fetch('/api/sector', {{
+      method:'POST', headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{symbol, sector}})
+    }});
+  }} catch(e) {{ console.warn('섹터 저장 실패', e); }}
+}}
 
 const highChips = document.getElementById('highChips');
 HIGHS.forEach(p => {{
@@ -304,6 +334,7 @@ const COLS = [
 ];
 HIGHS.forEach(p => COLS.push({{k:'h'+p, t:p+'주신고가'}}));
 COLS.push({{k:'aligned', t:'정배열'}});
+COLS.push({{k:'sector', t:'섹터 (직접 입력)'}});
 COLS.push({{k:'high_count', t:'충족수', num:true}});
 COLS.push({{k:'last_date', t:'기준주'}});
 
@@ -326,8 +357,12 @@ function passFilter(r) {{
     const s=(r.name+' '+r.symbol).toLowerCase();
     if(!s.includes(state.search)) return false;
   }}
+  const curSector = (SECTORS[r.symbol]||'');
+  if(state.noSector) {{
+    if(curSector.trim()!=='') return false;
+  }}
   if(state.sector) {{
-    if(!(r.sector||'').toLowerCase().includes(state.sector)) return false;
+    if(!curSector.toLowerCase().includes(state.sector)) return false;
   }}
   if(state.highs.size>0) {{
     const sel=[...state.highs];
@@ -352,6 +387,11 @@ function cell(r, k) {{
   if(k==='close') return `<span class="num">${{r.close_fmt}}</span>`;
   if(k==='mcap') return `<span class="num">${{r.mcap_fmt}}</span>`;
   if(k==='aligned') return r.aligned ? '<span class="aligned-yes">정배열</span>' : '<span class="no">-</span>';
+  if(k==='sector') {{
+    const v = (SECTORS[r.symbol]||'').replace(/"/g,'&quot;');
+    return `<input class="sector-edit" data-sym="${{r.symbol}}" list="sectorList" `
+      + `value="${{v}}" placeholder="섹터 입력..." />`;
+  }}
   if(k==='high_count') return `<span class="num">${{r.high_count}}</span>`;
   if(k==='last_date') return `<span class="cc">${{r.last_date}}</span>`;
   if(k.startsWith('h')) {{
@@ -359,7 +399,6 @@ function cell(r, k) {{
     if(v===null) return '<span class="na">·</span>';
     return v ? '<span class="tag yes">신고가</span>' : '<span class="no">-</span>';
   }}
-  if(k.startsWith('ma')) {{ const v=r[k]; return `<span class="num">${{v===null?'-':v}}</span>`; }}
   return '';
 }}
 
@@ -369,9 +408,9 @@ function render() {{
   rows.sort((a,b)=>{{
     let av=a[k], bv=b[k];
     if(k.startsWith('h')||k==='aligned') {{ av=av?1:0; bv=bv?1:0; }}
-    if(k.startsWith('ma')) {{ av=parseFloat((av||'0').toString().replace(/,/g,''))||0; bv=parseFloat((bv||'0').toString().replace(/,/g,''))||0; }}
     if(k==='close') {{ av=a.close||0; bv=b.close||0; }}
     if(k==='mcap') {{ av=a.mcap||0; bv=b.mcap||0; }}
+    if(k==='sector') {{ av=(SECTORS[a.symbol]||''); bv=(SECTORS[b.symbol]||''); }}
     if(typeof av==='string') return av.localeCompare(bv)*dir;
     return (av-bv)*dir;
   }});
@@ -393,6 +432,15 @@ function render() {{
     if(th.dataset.k===k) th.classList.add(dir>0?'sort-asc':'sort-desc'); else th.classList.add('sort-ind');
   }});
 }}
+
+// 섹터 입력칸: 변경 시 서버 저장 (이벤트 위임으로 재렌더링에도 안전)
+const tbodyEl = document.getElementById('tbody');
+tbodyEl.addEventListener('change', e => {{
+  const inp = e.target.closest('.sector-edit');
+  if(!inp) return;
+  saveSector(inp.dataset.sym, inp.value.trim());
+}});
+
 render();
 </script>
 </body>

@@ -135,9 +135,8 @@ def _normalize(df: pd.DataFrame, market: str) -> pd.DataFrame:
     out["market"] = market
     out["country"] = meta["country"]
     out["currency"] = meta["currency"]
-    # 섹터 정보가 있으면 보존
-    sec_col = cols.get("sector") or cols.get("industry")
-    out["sector"] = df[sec_col].astype(str) if sec_col else ""
+    # 섹터는 사용자가 직접 입력/관리하므로 데이터 소스에서 가져오지 않음 (항상 공란)
+    out["sector"] = ""
     # 시가총액: 한국 캐시 CSV의 Marcap(원 단위)이 있으면 보존, 없으면 NaN(미국은 나중에 채움)
     cap_col = cols.get("marcap") or cols.get("marketcap")
     if cap_col:

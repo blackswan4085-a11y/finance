@@ -33,6 +33,8 @@ class Config:
     cache_dir: str = "cache"
     output_dir: str = "output"
     use_cache: bool = True
+    port: int = 8000
+    auto_open: bool = True
 
     base_dir: str = "."
 
