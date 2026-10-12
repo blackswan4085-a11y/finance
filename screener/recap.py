@@ -192,6 +192,44 @@ def _build_prompt(rows: List[Dict]) -> str:
     )
 
 
+def _resolve_argv(cmd_tmpl: str, use_prompt_arg: bool, prompt: str) -> List[str]:
+    """명령 템플릿 → 실행 가능한 argv로 변환.
+
+    Windows에서 npm 전역 CLI는 보통 codex.ps1 / codex.cmd 래퍼로 설치되는데,
+    이는 실행 파일이 아니라 PATH 조회로는 바로 실행되지 않는다.
+    - .ps1  → powershell -ExecutionPolicy Bypass -File <ps1> <args...>
+    - .cmd/.bat → cmd /c <bat> <args...>
+    - 그 외(이름만 있는 경우) → shutil.which 로 PATH에서 실제 경로/래퍼 탐색
+    """
+    import shutil
+
+    # Windows 경로의 백슬래시가 shlex 에서 escape 로 먹히지 않도록 posix=False
+    on_windows = os.name == "nt"
+    parts = shlex.split(cmd_tmpl, posix=not on_windows)
+    # posix=False 는 토큰을 따옴표째 남기므로 제거
+    parts = [p.strip('"').strip("'") for p in parts]
+    if not parts:
+        return []
+
+    exe, rest = parts[0], parts[1:]
+
+    # PATH 에서 실제 경로 탐색 (codex → codex.ps1/.cmd 자동 매칭)
+    resolved = shutil.which(exe) or exe
+    low = resolved.lower()
+
+    if on_windows and low.endswith(".ps1"):
+        argv = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", resolved, *rest]
+    elif on_windows and (low.endswith(".cmd") or low.endswith(".bat")):
+        argv = ["cmd", "/c", resolved, *rest]
+    else:
+        argv = [resolved, *rest]
+
+    if use_prompt_arg:
+        argv.append(prompt)
+    return argv
+
+
 def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
     """외부 CLI로 코멘터리 생성. 반환: {text, source, ok}."""
     if not rcfg.commentary_enabled:
@@ -201,19 +239,20 @@ def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
     cmd_tmpl = rcfg.commentary_cmd
     try:
         if "{prompt}" in cmd_tmpl:
-            # 프롬프트를 인자로 안전하게 치환
-            argv = shlex.split(cmd_tmpl.replace("{prompt}", ""))
-            argv.append(prompt)
+            # 프롬프트를 인자로 전달
+            argv = _resolve_argv(cmd_tmpl.replace("{prompt}", "").strip(),
+                                 use_prompt_arg=True, prompt=prompt)
             proc = subprocess.run(
                 argv, capture_output=True, text=True, timeout=rcfg.commentary_timeout,
-                cwd=rcfg.base_dir,
+                cwd=rcfg.base_dir, encoding="utf-8", errors="replace",
             )
         else:
             # stdin 으로 전달
-            argv = shlex.split(cmd_tmpl)
+            argv = _resolve_argv(cmd_tmpl, use_prompt_arg=False, prompt=prompt)
             proc = subprocess.run(
                 argv, input=prompt, capture_output=True, text=True,
                 timeout=rcfg.commentary_timeout, cwd=rcfg.base_dir,
+                encoding="utf-8", errors="replace",
             )
         out = (proc.stdout or "").strip()
         if proc.returncode == 0 and out:
@@ -226,7 +265,10 @@ def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
     except FileNotFoundError:
         return {
             "text": "(코멘터리 CLI를 찾을 수 없습니다. config.yaml의 recap.commentary_cmd 를 "
-                    "설치된 명령에 맞게 설정하세요. 예: 'codex exec {prompt}')",
+                    "설치된 명령에 맞게 설정하세요. 예: 'codex exec {prompt}'. "
+                    "Windows에서 codex.ps1 로 설치된 경우 PATH 에 있으면 자동 인식되며, "
+                    "안 되면 전체 경로를 지정하세요: "
+                    "'C:\\\\Users\\\\<이름>\\\\AppData\\\\Roaming\\\\npm\\\\codex.ps1 exec {prompt}')",
             "source": "codex", "ok": False,
         }
     except subprocess.TimeoutExpired:
