@@ -32,8 +32,18 @@ DEFAULT_INDICES: List[Dict] = [
     {"group": "미국", "name": "다우", "symbol": "^DJI"},
     {"group": "미국", "name": "러셀2000", "symbol": "^RUT"},
     {"group": "미국", "name": "필라델피아반도체", "symbol": "^SOX"},
-    {"group": "아시아", "name": "니케이225", "symbol": "^N225"},
-    {"group": "아시아", "name": "대만가권", "symbol": "^TWII"},
+    {"group": "일본", "name": "니케이225", "symbol": "^N225"},
+    {"group": "중화권", "name": "대만가권", "symbol": "^TWII"},
+    {"group": "중화권", "name": "상해종합", "symbol": "SSEC"},
+    {"group": "중화권", "name": "CSI300", "symbol": "000300"},
+    {"group": "중화권", "name": "홍콩 항셍", "symbol": "^HSI"},
+    {"group": "인도", "name": "센섹스", "symbol": "^BSESN"},
+    {"group": "인도", "name": "니프티50", "symbol": "^NSEI"},
+    {"group": "유럽", "name": "유로스톡스50", "symbol": "^STOXX50E"},
+    {"group": "유럽", "name": "독일 DAX", "symbol": "^GDAXI"},
+    {"group": "유럽", "name": "영국 FTSE100", "symbol": "^FTSE"},
+    {"group": "유럽", "name": "프랑스 CAC40", "symbol": "^FCHI"},
+    {"group": "북미", "name": "캐나다 TSX", "symbol": "^GSPTSE"},
 ]
 
 

@@ -81,6 +81,8 @@ recap:
 
   # 표시할 지수 목록 (group=행 그룹, name=표시명, symbol=FDR 티커)
   #   '^' 접두사(Yahoo 소스)가 최신값 안정적 — 검증됨
+  #   중국 본토 지수(SSEC/000300)는 '^' 없는 FDR 네이티브 심볼이어야 받아짐
+  #   글로벌 주식시장 시총 상위 시장을 지역별로 수록
   indices:
     - { group: "한국",   name: "코스피",            symbol: "^KS11" }
     - { group: "한국",   name: "코스닥",            symbol: "^KQ11" }
@@ -89,5 +91,15 @@ recap:
     - { group: "미국",   name: "다우",              symbol: "^DJI" }
     - { group: "미국",   name: "러셀2000",          symbol: "^RUT" }
     - { group: "미국",   name: "필라델피아반도체",   symbol: "^SOX" }
-    - { group: "아시아", name: "니케이225",         symbol: "^N225" }
-    - { group: "아시아", name: "대만가권",          symbol: "^TWII" }
+    - { group: "일본",   name: "니케이225",         symbol: "^N225" }
+    - { group: "중화권", name: "대만가권",          symbol: "^TWII" }
+    - { group: "중화권", name: "상해종합",          symbol: "SSEC" }
+    - { group: "중화권", name: "CSI300",           symbol: "000300" }
+    - { group: "중화권", name: "홍콩 항셍",         symbol: "^HSI" }
+    - { group: "인도",   name: "센섹스",            symbol: "^BSESN" }
+    - { group: "인도",   name: "니프티50",          symbol: "^NSEI" }
+    - { group: "유럽",   name: "유로스톡스50",      symbol: "^STOXX50E" }
+    - { group: "유럽",   name: "독일 DAX",          symbol: "^GDAXI" }
+    - { group: "유럽",   name: "영국 FTSE100",      symbol: "^FTSE" }
+    - { group: "유럽",   name: "프랑스 CAC40",      symbol: "^FCHI" }
+    - { group: "북미",   name: "캐나다 TSX",        symbol: "^GSPTSE" }
