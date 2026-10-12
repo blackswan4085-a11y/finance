@@ -19,19 +19,33 @@ def _pct_cell(v: Optional[float]) -> str:
     return f'<td class="pct {cls}">{v:+.1f}%</td>'
 
 
+# 그룹 아이콘(국기/상징) — 어떤 국가/카테고리인지 즉시 인지하도록
+GROUP_ICON = {
+    "한국": "🇰🇷", "미국": "🇺🇸", "일본": "🇯🇵", "중화권": "🇨🇳", "인도": "🇮🇳",
+    "유럽": "🇪🇺", "북미": "🇨🇦", "아시아": "🌏", "글로벌": "🌐", "지수": "📊",
+    "원화": "🇰🇷", "귀금속": "🥇", "산업금속": "🔩", "에너지": "🛢️", "농산물": "🌾",
+}
+
+
+def _grp_cell(group: str, rowspan: int) -> str:
+    icon = GROUP_ICON.get(group, "")
+    label = f"{icon} {html.escape(group)}" if icon else html.escape(group)
+    return (f'<td class="grp" rowspan="{rowspan}">'
+            f'<span class="glabel">{label}</span></td>')
+
+
 def _group_rows(rows: List[Dict]) -> str:
     out = []
     prev_group = None
-    # 그룹별 rowspan 계산
     group_counts: Dict[str, int] = {}
     for r in rows:
         group_counts[r["group"]] = group_counts.get(r["group"], 0) + 1
 
     for r in rows:
         tds = []
-        if r["group"] != prev_group:
-            tds.append(f'<td class="grp" rowspan="{group_counts[r["group"]]}">'
-                       f'{html.escape(r["group"])}</td>')
+        is_start = r["group"] != prev_group
+        if is_start:
+            tds.append(_grp_cell(r["group"], group_counts[r["group"]]))
             prev_group = r["group"]
         name = html.escape(r["name"])
         date = html.escape(str(r.get("date", "-")))
@@ -43,7 +57,8 @@ def _group_rows(rows: List[Dict]) -> str:
         tds.append(_pct_cell(r.get("chg_ytd")))
         tds.append(f'<td class="spark-cell">{r.get("spark", "")}</td>')
         tds.append(_pct_cell(r.get("from_52w_high")))
-        out.append("<tr>" + "".join(tds) + "</tr>")
+        tr_cls = ' class="grp-start"' if is_start else ""
+        out.append(f"<tr{tr_cls}>" + "".join(tds) + "</tr>")
     return "\n".join(out)
 
 
@@ -65,9 +80,9 @@ def _ratefx_rows(rows: List[Dict], val_fmt: str) -> str:
         group_counts[r["group"]] = group_counts.get(r["group"], 0) + 1
     for r in rows:
         tds = []
-        if r["group"] != prev_group:
-            tds.append(f'<td class="grp" rowspan="{group_counts[r["group"]]}">'
-                       f'{html.escape(r["group"])}</td>')
+        is_start = r["group"] != prev_group
+        if is_start:
+            tds.append(_grp_cell(r["group"], group_counts[r["group"]]))
             prev_group = r["group"]
         unit = r.get("unit", "")
         name = html.escape(r["name"])
@@ -80,8 +95,23 @@ def _ratefx_rows(rows: List[Dict], val_fmt: str) -> str:
         tds.append(_delta_cell(r.get("chg_1m"), unit))
         tds.append(_delta_cell(r.get("chg_3m"), unit))
         tds.append(f'<td class="spark-cell">{r.get("spark", "")}</td>')
-        out.append("<tr>" + "".join(tds) + "</tr>")
+        tr_cls = ' class="grp-start"' if is_start else ""
+        out.append(f"<tr{tr_cls}>" + "".join(tds) + "</tr>")
     return "\n".join(out)
+
+
+def _commentary_block(commentary: Dict, title: str) -> str:
+    """분야별 AI 코멘터리 박스 HTML."""
+    text = html.escape((commentary or {}).get("text", "") or "")
+    ok = (commentary or {}).get("ok", False)
+    paras = "".join(f"<p>{p}</p>" for p in text.split("\n") if p.strip()) or \
+        "<p class='muted'>아직 코멘터리가 없습니다. [업데이트]를 눌러 생성하세요.</p>"
+    badge = "" if ok else '<span class="warn-badge">미생성</span>'
+    return (
+        f'<div class="cmt">'
+        f'<div class="cmt-title">🤖 {html.escape(title)}{badge}</div>'
+        f'{paras}</div>'
+    )
 
 
 def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
@@ -89,7 +119,9 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
     commodities = payload.get("commodities", []) if payload else []
     rates = payload.get("rates", []) if payload else []
     fx = payload.get("fx", []) if payload else []
-    commentary = payload.get("commentary", {}) if payload else {}
+    comm_index = payload.get("commentary_index", {}) if payload else {}
+    comm_cmdty = payload.get("commentary_commodity", {}) if payload else {}
+    comm_ratefx = payload.get("commentary_ratefx", {}) if payload else {}
     generated_at = payload.get("generated_at", "아직 생성되지 않음") if payload else "아직 생성되지 않음"
 
     table_body = _group_rows(rows) if rows else (
@@ -107,11 +139,9 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
         '<tr><td colspan="7" class="empty">아직 환율 데이터가 없습니다.</td></tr>'
     )
 
-    comm_text = html.escape(commentary.get("text", "") or "")
-    comm_ok = commentary.get("ok", False)
-    comm_paras = "".join(f"<p>{p}</p>" for p in comm_text.split("\n") if p.strip()) or \
-        "<p class='muted'>아직 코멘터리가 없습니다. [업데이트]를 눌러 생성하세요.</p>"
-    comm_badge = "" if comm_ok else '<span class="warn-badge">생성 실패/미생성</span>'
+    cmt_index = _commentary_block(comm_index, "지수 AI 코멘터리")
+    cmt_cmdty = _commentary_block(comm_cmdty, "원자재 AI 코멘터리")
+    cmt_ratefx = _commentary_block(comm_ratefx, "금리·환율 AI 코멘터리")
 
     return f"""<!doctype html>
 <html lang="ko"><head>
@@ -126,10 +156,12 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
           font-size:14px; }}
   .wrap {{ max-width:980px; margin:0 auto; padding:24px 16px 60px; }}
-  .topbar {{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }}
-  .topbar a {{ color:var(--muted); text-decoration:none; font-size:13px; }}
-  .topbar a:hover {{ color:var(--txt); }}
+  .topbar {{ display:flex; align-items:center; justify-content:space-between;
+             gap:12px; margin-bottom:16px; }}
   h1 {{ font-size:20px; margin:0; letter-spacing:-.5px; }}
+  .navbtn {{ background:#2563eb; color:#fff; text-decoration:none; border-radius:8px;
+             padding:9px 16px; font-size:13px; font-weight:600; white-space:nowrap; }}
+  .navbtn:hover {{ background:#1d4ed8; }}
   .section {{ background:var(--panel); border:1px solid var(--line);
               border-radius:12px; overflow:hidden; margin-bottom:20px; }}
   .section-head {{ background:#1b2740; padding:11px 16px; font-weight:700;
@@ -141,10 +173,17 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
             white-space:nowrap; }}
   thead th {{ color:var(--muted); font-weight:600; font-size:12px;
               background:var(--panel2); position:sticky; top:0; }}
-  td.grp {{ text-align:center; color:var(--muted); font-weight:700;
-            border-right:1px solid var(--line); background:var(--panel2);
-            vertical-align:middle; width:46px; }}
+  /* 그룹 셀: 국가/카테고리를 세로쓰기+강조색으로 명확히 구분 */
+  td.grp {{ text-align:center; color:#cdd8ea; font-weight:800; font-size:13px;
+            border-right:3px solid #3b4a66; background:#1b2740;
+            vertical-align:middle; width:40px; letter-spacing:1px;
+            border-bottom:2px solid var(--line) !important; }}
+  td.grp .glabel {{ writing-mode:vertical-rl; text-orientation:upright;
+            display:inline-block; padding:4px 0; }}
+  /* 그룹의 첫 행 위쪽에 굵은 구분선 → 그룹 경계가 또렷 */
+  tr.grp-start td {{ border-top:2px solid #32415c; }}
   td.name {{ text-align:left; font-weight:600; }}
+  td.name .flag {{ margin-right:6px; }}
   td.name .dt {{ color:var(--muted); font-weight:400; font-size:11px; margin-left:6px; }}
   td.price {{ font-variant-numeric:tabular-nums; }}
   td.pct {{ font-variant-numeric:tabular-nums; font-weight:600; }}
@@ -154,9 +193,11 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
   td.spark-cell {{ text-align:center; width:130px; }}
   .spark {{ vertical-align:middle; }}
   td.empty {{ text-align:center; color:var(--muted); padding:30px; }}
-  .cmt {{ padding:16px 18px; line-height:1.75; }}
-  .cmt .cmt-title {{ font-weight:700; color:#8ab4ff; margin-bottom:8px; }}
-  .cmt p {{ margin:0 0 12px; color:#d4dcea; }}
+  .cmt {{ padding:14px 18px 16px; line-height:1.7; background:#0f1a2e;
+          border-top:1px solid var(--line); }}
+  .cmt .cmt-title {{ font-weight:700; color:#8ab4ff; margin-bottom:8px; font-size:13px; }}
+  .cmt p {{ margin:0 0 10px; color:#d4dcea; }}
+  .cmt p:last-child {{ margin-bottom:0; }}
   .cmt p.muted {{ color:var(--muted); }}
   .btn {{ background:#2563eb; color:#fff; border:none; border-radius:8px;
           padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; }}
@@ -175,8 +216,8 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
 </head><body>
 <div class="wrap">
   <div class="topbar">
-    <a href="/">← 스크리너로</a>
     <h1>1. 지난주 시장 Recap</h1>
+    <a class="navbtn" href="/">← 신고가·정배열 스크리너</a>
   </div>
 
   <div class="section">
@@ -199,6 +240,7 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
 {table_body}
       </tbody>
     </table>
+    {cmt_index}
   </div>
 
   <div class="section">
@@ -213,6 +255,7 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
 {commodity_body}
       </tbody>
     </table>
+    {cmt_cmdty}
   </div>
 
   <div class="section">
@@ -238,14 +281,7 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
 {fx_body}
       </tbody>
     </table>
-  </div>
-
-  <div class="section">
-    <div class="section-head"><span>📝 Editor's Comment{comm_badge}</span></div>
-    <div class="cmt" id="cmt">
-      <div class="cmt-title">지난주 시장 코멘터리</div>
-      {comm_paras}
-    </div>
+    {cmt_ratefx}
   </div>
 </div>
 
@@ -256,7 +292,8 @@ async function refresh(withCommentary) {{
   const status = document.getElementById('status');
   btn.disabled = true; btn2.disabled = true;
   status.innerHTML = '<span class="spin"></span>' +
-    (withCommentary ? '지수 수집 + 코멘터리 생성 중… (최대 수십 초)' : '지수 데이터 수집 중…');
+    (withCommentary ? '데이터 수집 + 분야별 AI 코멘터리 3종 생성 중… (수십 초~1분)'
+                    : '시세 데이터만 수집 중…');
   try {{
     const res = await fetch('/api/recap/refresh', {{
       method:'POST', headers:{{'Content-Type':'application/json'}},

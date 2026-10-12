@@ -265,33 +265,46 @@ def _rate_fx_lines(rows: List[Dict]) -> str:
     return "\n".join(lines)
 
 
-def _build_prompt(index_rows: List[Dict], commodity_rows: Optional[List[Dict]] = None,
-                  rate_rows: Optional[List[Dict]] = None,
-                  fx_rows: Optional[List[Dict]] = None) -> str:
-    index_block = _rows_to_lines(index_rows)
-    commodity_block = _rows_to_lines(commodity_rows or [])
-    rate_block = _rate_fx_lines(rate_rows or [])
-    fx_block = _rate_fx_lines(fx_rows or [])
-    parts = [
-        "너는 금융 시장 애널리스트다. 아래는 지난주 주요 글로벌 지수·원자재·국채금리·환율 데이터다.\n"
-        "이 데이터를 바탕으로 한국어로 '지난주 시장 Recap - Editor's Comment'를 작성하라.\n\n"
-        "요구사항:\n"
-        "- 4~6개 문단, 각 문단은 2~4문장\n"
-        "- 첫 문단: 지난주 전체 시장을 한 문장으로 요약 후 핵심 지수 등락 설명\n"
-        "- 지수 문단: 눈에 띄는 지수(강세/약세), 섹터, 지역별 대비\n"
-        "- 원자재 문단: 귀금속·에너지·농산물 흐름과 의미(인플레·경기 신호 등)\n"
-        "- 금리/환율 문단: 국채금리 변화(bp)와 환율 흐름이 주는 신호(통화정책·위험선호 등)\n"
-        "- 마지막 문단: 길게 본 추세(52주 고점 대비, YTD)와 전망/주목 포인트\n"
-        "- 과장·투자권유 금지. 수치는 데이터에 있는 것만 사용. 마크다운 기호 없이 평문으로.\n\n"
-        f"[주요 지수]\n{index_block}\n",
-    ]
-    if commodity_block:
-        parts.append(f"\n[주요 원자재]\n{commodity_block}\n")
-    if rate_block:
-        parts.append(f"\n[국채 금리] (등락 bp)\n{rate_block}\n")
-    if fx_block:
-        parts.append(f"\n[환율] (등락 %)\n{fx_block}\n")
-    return "".join(parts)
+_COMMON_RULES = (
+    "- 3개 문단, 각 문단은 2~4문장\n"
+    "- 과장·투자권유 금지. 수치는 데이터에 있는 것만 사용. 마크다운 기호 없이 평문으로.\n"
+    "- 서두 인사·마무리 멘트 없이 분석 본문만 작성.\n"
+)
+
+
+def build_index_prompt(index_rows: List[Dict]) -> str:
+    return (
+        "너는 금융 시장 애널리스트다. 아래는 지난주 주요 글로벌 '주식 지수'의 성과 데이터다.\n"
+        "이 데이터만으로 한국어 지수 코멘터리를 작성하라.\n\n"
+        "요구사항:\n" + _COMMON_RULES +
+        "- 첫 문단: 지난주 글로벌 증시를 한 문장으로 요약 후 핵심 지수 등락\n"
+        "- 둘째 문단: 눈에 띄는 강세/약세 지수, 지역별(미국·한국·유럽·아시아 등) 대비\n"
+        "- 셋째 문단: 길게 본 추세(YTD, 52주 고점 대비)와 주목 포인트\n\n"
+        f"[주요 지수]\n{_rows_to_lines(index_rows)}\n"
+    )
+
+
+def build_commodity_prompt(commodity_rows: List[Dict]) -> str:
+    return (
+        "너는 원자재 시장 애널리스트다. 아래는 지난주 '주요 원자재'의 성과 데이터다.\n"
+        "이 데이터만으로 한국어 원자재 코멘터리를 작성하라.\n\n"
+        "요구사항:\n" + _COMMON_RULES +
+        "- 귀금속(금·은 등)·산업금속(구리)·에너지(원유·천연가스)·농산물로 나눠 흐름 설명\n"
+        "- 원자재 가격이 주는 거시 신호(인플레이션·경기·달러 등) 해석\n\n"
+        f"[주요 원자재]\n{_rows_to_lines(commodity_rows)}\n"
+    )
+
+
+def build_rate_fx_prompt(rate_rows: List[Dict], fx_rows: List[Dict]) -> str:
+    return (
+        "너는 채권·외환 애널리스트다. 아래는 지난주 '국채 금리'와 '환율' 데이터다.\n"
+        "이 데이터만으로 한국어 금리·환율 코멘터리를 작성하라.\n\n"
+        "요구사항:\n" + _COMMON_RULES +
+        "- 국채금리 변화(bp)를 미국 수익률곡선(장단기)·주요국 10년물 중심으로 설명\n"
+        "- 환율(달러인덱스·원화 등) 흐름과 금리와의 관계, 위험선호·통화정책 신호 해석\n\n"
+        f"[국채 금리] (등락 bp)\n{_rate_fx_lines(rate_rows)}\n"
+        f"\n[환율] (등락 %)\n{_rate_fx_lines(fx_rows)}\n"
+    )
 
 
 def _resolve_argv(cmd_tmpl: str, use_prompt_arg: bool, prompt: str) -> List[str]:
@@ -402,15 +415,11 @@ def _clean_codex_output(raw: str) -> str:
     return cleaned or text
 
 
-def generate_commentary(rows: List[Dict], rcfg: RecapConfig,
-                        commodity_rows: Optional[List[Dict]] = None,
-                        rate_rows: Optional[List[Dict]] = None,
-                        fx_rows: Optional[List[Dict]] = None) -> Dict:
-    """외부 CLI로 코멘터리 생성. 반환: {text, source, ok}."""
+def run_commentary(prompt: str, rcfg: RecapConfig) -> Dict:
+    """주어진 프롬프트를 외부 CLI(codex)로 실행. 반환: {text, source, ok}."""
     if not rcfg.commentary_enabled:
         return {"text": "", "source": "disabled", "ok": False}
 
-    prompt = _build_prompt(rows, commodity_rows, rate_rows, fx_rows)
     cmd_tmpl = rcfg.commentary_cmd
     try:
         # 긴 멀티라인 프롬프트를 인자로 넘기면 Windows(powershell -File)에서
@@ -473,22 +482,29 @@ def save_recap(rcfg: RecapConfig, payload: Dict) -> None:
 
 
 def refresh_recap(rcfg: RecapConfig, with_commentary: bool = True) -> Dict:
-    """지수+원자재+금리+환율 수집 + (선택)코멘터리 생성 → 캐시 저장 → payload 반환."""
+    """지수+원자재+금리+환율 수집 + (선택)분야별 코멘터리 생성 → 캐시 저장."""
     rows = collect_indices(rcfg)
     commodities = collect_commodities(rcfg)
     rates = naver.collect_rates(rcfg.rates)
     fx = naver.collect_fx(rcfg.fx)
-    commentary = {"text": "", "source": "", "ok": False}
+
+    none_c = {"text": "", "source": "", "ok": False}
+    comm_index = comm_cmdty = comm_ratefx = dict(none_c)
     if with_commentary:
-        commentary = generate_commentary(rows, rcfg, commodity_rows=commodities,
-                                         rate_rows=rates, fx_rows=fx)
+        # 분야별로 각각 독립적인 AI 코멘터리 생성 (지수 / 원자재 / 금리·환율)
+        comm_index = run_commentary(build_index_prompt(rows), rcfg)
+        comm_cmdty = run_commentary(build_commodity_prompt(commodities), rcfg)
+        comm_ratefx = run_commentary(build_rate_fx_prompt(rates, fx), rcfg)
+
     payload = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "rows": rows,
         "commodities": commodities,
         "rates": rates,
         "fx": fx,
-        "commentary": commentary,
+        "commentary_index": comm_index,
+        "commentary_commodity": comm_cmdty,
+        "commentary_ratefx": comm_ratefx,
     }
     save_recap(rcfg, payload)
     return payload
