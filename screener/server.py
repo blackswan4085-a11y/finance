@@ -27,6 +27,8 @@ def _build_recap_config(cfg: Config) -> RecapConfig:
     if isinstance(raw, dict):
         if raw.get("indices"):
             rcfg.indices = raw["indices"]
+        if raw.get("commodities"):
+            rcfg.commodities = raw["commodities"]
         if raw.get("lookback_days"):
             rcfg.lookback_days = int(raw["lookback_days"])
         if raw.get("commentary_cmd"):

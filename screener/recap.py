@@ -47,10 +47,29 @@ DEFAULT_INDICES: List[Dict] = [
 ]
 
 
+# ----------------------------------------------------------------------------
+# 주요 원자재 (1-2) — FDR 선물 심볼 '=F'. 검증 완료.
+# ----------------------------------------------------------------------------
+DEFAULT_COMMODITIES: List[Dict] = [
+    {"group": "귀금속",   "name": "금",         "symbol": "GC=F"},
+    {"group": "귀금속",   "name": "은",         "symbol": "SI=F"},
+    {"group": "귀금속",   "name": "플래티넘",    "symbol": "PL=F"},
+    {"group": "귀금속",   "name": "팔라듐",      "symbol": "PA=F"},
+    {"group": "산업금속", "name": "구리",        "symbol": "HG=F"},
+    {"group": "에너지",   "name": "WTI 원유",    "symbol": "CL=F"},
+    {"group": "에너지",   "name": "브렌트유",    "symbol": "BZ=F"},
+    {"group": "에너지",   "name": "천연가스",    "symbol": "NG=F"},
+    {"group": "농산물",   "name": "옥수수",      "symbol": "ZC=F"},
+    {"group": "농산물",   "name": "밀",         "symbol": "ZW=F"},
+    {"group": "농산물",   "name": "대두",        "symbol": "ZS=F"},
+]
+
+
 @dataclass
 class RecapConfig:
     base_dir: str = "."
     indices: List[Dict] = field(default_factory=lambda: list(DEFAULT_INDICES))
+    commodities: List[Dict] = field(default_factory=lambda: list(DEFAULT_COMMODITIES))
     lookback_days: int = 400  # 52주 비교 + YTD 위해 1년+ 확보
     # 코멘터리 생성 CLI. {prompt} 자리표시자가 있으면 치환, 없으면 stdin으로 전달.
     #   codex는 git repo 밖에서도 돌도록 --skip-git-repo-check 필요.
@@ -157,12 +176,13 @@ def compute_index_row(meta: Dict, df: pd.DataFrame) -> Dict:
     }
 
 
-def collect_indices(rcfg: RecapConfig) -> List[Dict]:
-    start = (datetime.now() - timedelta(days=rcfg.lookback_days)).strftime("%Y-%m-%d")
+def collect_items(items: List[Dict], lookback_days: int) -> List[Dict]:
+    """지수/원자재 등 임의의 심볼 목록을 수집해 표 행 리스트로 반환."""
+    start = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
     rows: List[Dict] = []
-    for meta in rcfg.indices:
+    for meta in items:
         df = _fetch_index(meta["symbol"], start)
-        if df is None or df.empty:
+        if df is None or df.empty or df["Close"].dropna().empty:
             rows.append({
                 "group": meta["group"], "name": meta["name"], "symbol": meta["symbol"],
                 "date": "-", "price": None, "chg_1w": None, "chg_1m": None,
@@ -174,13 +194,20 @@ def collect_indices(rcfg: RecapConfig) -> List[Dict]:
     return rows
 
 
+def collect_indices(rcfg: RecapConfig) -> List[Dict]:
+    return collect_items(rcfg.indices, rcfg.lookback_days)
+
+
+def collect_commodities(rcfg: RecapConfig) -> List[Dict]:
+    return collect_items(rcfg.commodities, rcfg.lookback_days)
+
+
 # ----------------------------------------------------------------------------
 # 코멘터리 생성 (외부 CLI 호출)
 # ----------------------------------------------------------------------------
-def _build_prompt(rows: List[Dict]) -> str:
+def _rows_to_lines(rows: List[Dict]) -> str:
     def f(v):
         return f"{v:+.1f}%" if isinstance(v, (int, float)) else "N/A"
-
     lines = []
     for r in rows:
         if r.get("error"):
@@ -190,18 +217,27 @@ def _build_prompt(rows: List[Dict]) -> str:
             f"(1W {f(r['chg_1w'])}, 1M {f(r['chg_1m'])}, 3M {f(r['chg_3m'])}, "
             f"YTD {f(r['chg_ytd'])}, 52주고점대비 {f(r['from_52w_high'])})"
         )
-    data_block = "\n".join(lines)
-    return (
-        "너는 금융 시장 애널리스트다. 아래는 주요 글로벌 지수의 주간 성과 데이터다.\n"
+    return "\n".join(lines)
+
+
+def _build_prompt(index_rows: List[Dict], commodity_rows: Optional[List[Dict]] = None) -> str:
+    index_block = _rows_to_lines(index_rows)
+    commodity_block = _rows_to_lines(commodity_rows or [])
+    parts = [
+        "너는 금융 시장 애널리스트다. 아래는 지난주 주요 글로벌 지수와 원자재의 주간 성과 데이터다.\n"
         "이 데이터를 바탕으로 한국어로 '지난주 시장 Recap - Editor's Comment'를 작성하라.\n\n"
         "요구사항:\n"
-        "- 3~4개 문단, 각 문단은 2~4문장\n"
+        "- 4~5개 문단, 각 문단은 2~4문장\n"
         "- 첫 문단: 지난주 전체 시장을 한 문장으로 요약 후 핵심 지수 등락 설명\n"
-        "- 중간 문단: 눈에 띄는 지수(강세/약세), 섹터(반도체 등), 지역별 대비\n"
+        "- 중간 문단: 눈에 띄는 지수(강세/약세), 섹터, 지역별 대비\n"
+        "- 원자재 문단: 귀금속·에너지·농산물 등 원자재 흐름과 그 의미(인플레·경기 신호 등)\n"
         "- 마지막 문단: 길게 본 추세(52주 고점 대비, YTD)와 전망/주목 포인트\n"
         "- 과장·투자권유 금지. 수치는 데이터에 있는 것만 사용. 마크다운 기호 없이 평문으로.\n\n"
-        f"데이터:\n{data_block}\n"
-    )
+        f"[주요 지수]\n{index_block}\n",
+    ]
+    if commodity_block:
+        parts.append(f"\n[주요 원자재]\n{commodity_block}\n")
+    return "".join(parts)
 
 
 def _resolve_argv(cmd_tmpl: str, use_prompt_arg: bool, prompt: str) -> List[str]:
@@ -281,12 +317,13 @@ def _clean_codex_output(raw: str) -> str:
     return cleaned or text
 
 
-def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
+def generate_commentary(rows: List[Dict], rcfg: RecapConfig,
+                        commodity_rows: Optional[List[Dict]] = None) -> Dict:
     """외부 CLI로 코멘터리 생성. 반환: {text, source, ok}."""
     if not rcfg.commentary_enabled:
         return {"text": "", "source": "disabled", "ok": False}
 
-    prompt = _build_prompt(rows)
+    prompt = _build_prompt(rows, commodity_rows)
     cmd_tmpl = rcfg.commentary_cmd
     try:
         if "{prompt}" in cmd_tmpl:
@@ -351,14 +388,16 @@ def save_recap(rcfg: RecapConfig, payload: Dict) -> None:
 
 
 def refresh_recap(rcfg: RecapConfig, with_commentary: bool = True) -> Dict:
-    """지수 데이터 수집 + (선택)코멘터리 생성 → 캐시 저장 → payload 반환."""
+    """지수+원자재 데이터 수집 + (선택)코멘터리 생성 → 캐시 저장 → payload 반환."""
     rows = collect_indices(rcfg)
+    commodities = collect_commodities(rcfg)
     commentary = {"text": "", "source": "", "ok": False}
     if with_commentary:
-        commentary = generate_commentary(rows, rcfg)
+        commentary = generate_commentary(rows, rcfg, commodity_rows=commodities)
     payload = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "rows": rows,
+        "commodities": commodities,
         "commentary": commentary,
     }
     save_recap(rcfg, payload)

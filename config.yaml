@@ -103,3 +103,17 @@ recap:
     - { group: "유럽",   name: "영국 FTSE100",      symbol: "^FTSE" }
     - { group: "유럽",   name: "프랑스 CAC40",      symbol: "^FCHI" }
     - { group: "북미",   name: "캐나다 TSX",        symbol: "^GSPTSE" }
+
+  # 1-2. 주요 원자재 — FDR 선물 심볼('=F'). 검증 완료.
+  commodities:
+    - { group: "귀금속",   name: "금",        symbol: "GC=F" }
+    - { group: "귀금속",   name: "은",        symbol: "SI=F" }
+    - { group: "귀금속",   name: "플래티넘",   symbol: "PL=F" }
+    - { group: "귀금속",   name: "팔라듐",     symbol: "PA=F" }
+    - { group: "산업금속", name: "구리",       symbol: "HG=F" }
+    - { group: "에너지",   name: "WTI 원유",   symbol: "CL=F" }
+    - { group: "에너지",   name: "브렌트유",   symbol: "BZ=F" }
+    - { group: "에너지",   name: "천연가스",   symbol: "NG=F" }
+    - { group: "농산물",   name: "옥수수",     symbol: "ZC=F" }
+    - { group: "농산물",   name: "밀",        symbol: "ZW=F" }
+    - { group: "농산물",   name: "대두",       symbol: "ZS=F" }

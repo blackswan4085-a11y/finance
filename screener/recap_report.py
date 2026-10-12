@@ -49,11 +49,16 @@ def _group_rows(rows: List[Dict]) -> str:
 
 def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
     rows = payload.get("rows", []) if payload else []
+    commodities = payload.get("commodities", []) if payload else []
     commentary = payload.get("commentary", {}) if payload else {}
     generated_at = payload.get("generated_at", "아직 생성되지 않음") if payload else "아직 생성되지 않음"
 
     table_body = _group_rows(rows) if rows else (
         '<tr><td colspan="9" class="empty">아직 데이터가 없습니다. '
+        '[업데이트] 버튼을 눌러 생성하세요.</td></tr>'
+    )
+    commodity_body = _group_rows(commodities) if commodities else (
+        '<tr><td colspan="9" class="empty">아직 원자재 데이터가 없습니다. '
         '[업데이트] 버튼을 눌러 생성하세요.</td></tr>'
     )
 
@@ -147,6 +152,20 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
       </tr></thead>
       <tbody id="tbody">
 {table_body}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span>1-2. 주요 원자재</span></div>
+    <table>
+      <thead><tr>
+        <th></th><th style="text-align:left">품목</th><th>가격</th>
+        <th>1W</th><th>1M</th><th>3M</th><th>YTD</th>
+        <th>추이(60일)</th><th>52H대비</th>
+      </tr></thead>
+      <tbody id="tbody-cmdty">
+{commodity_body}
       </tbody>
     </table>
   </div>
