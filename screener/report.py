@@ -145,9 +145,13 @@ _TEMPLATE = r"""<!DOCTYPE html>
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     font-size:14px; }}
   header {{ padding:18px 24px; background:linear-gradient(135deg,#1a2230,#141b26);
-    border-bottom:1px solid var(--border); }}
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:16px; }}
   header h1 {{ margin:0 0 4px; font-size:20px; }}
   header .sub {{ color:var(--muted); font-size:13px; }}
+  .navbtn {{ background:#2563eb; color:#fff; text-decoration:none; border-radius:8px;
+    padding:9px 16px; font-size:13px; font-weight:600; white-space:nowrap; }}
+  .navbtn:hover {{ background:#1d4ed8; }}
   .wrap {{ padding:16px 24px 60px; }}
   .controls {{ background:var(--panel); border:1px solid var(--border); border-radius:10px;
     padding:14px 16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; }}
@@ -218,8 +222,11 @@ _TEMPLATE = r"""<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <h1>📈 신고가 · 정배열 스크리너</h1>
-  <div class="sub">기준일 {today} · 포함모드 <code>{include_mode}</code> · 전체 {total}종목 (정배열 {aligned_count})</div>
+  <div>
+    <h1>📈 신고가 · 정배열 스크리너</h1>
+    <div class="sub">기준일 {today} · 포함모드 <code>{include_mode}</code> · 전체 {total}종목 (정배열 {aligned_count})</div>
+  </div>
+  <a class="navbtn" href="/recap">📊 시장 Recap →</a>
 </header>
 <div class="wrap">
   <div class="controls">

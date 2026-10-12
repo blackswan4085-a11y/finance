@@ -54,3 +54,89 @@ auto_open: true         # 실행 시 브라우저 자동 열기
 
 # 환율: 시가총액 정렬 시 원화를 달러로 환산해 공통 비교하기 위한 기준 (1달러 = N원)
 usd_krw: 1400
+
+# ==========================================================
+#  주간 시장 Recap (/recap 페이지)
+# ==========================================================
+# 서버 실행 후 http://localhost:8000/recap 에서 [업데이트] 클릭 시
+#   1) FDR로 주요 지수 데이터 수집(현재가, 1W/1M/3M/YTD, 52주 고점 대비)
+#   2) 아래 commentary_cmd 로 코멘터리(Editor's Comment) 생성
+#   3) recap_cache.json 에 저장 후 화면 갱신
+recap:
+  # 코멘터리 생성에 사용할 CLI 명령 (LLM API 비용 0, 구독 CLI 활용).
+  #   - 프롬프트는 항상 '표준입력(stdin)'으로 전달된다. (긴 프롬프트가 Windows의
+  #     powershell -File 인자 전달에서 유실되는 문제를 피하기 위함)
+  #   - "{prompt}" 자리표시자는 '-'(=stdin에서 읽기) 로 자동 치환된다.
+  #     codex는 'codex exec ... -' 형태로 stdin 프롬프트를 읽는다.
+  #   예) codex:  "codex exec --skip-git-repo-check --sandbox read-only {prompt}"
+  #       claude: "claude -p"   (claude는 stdin 입력도 지원)
+  #
+  #   ※ codex 플래그 설명:
+  #     --skip-git-repo-check : git 저장소 밖에서도 실행 허용 (없으면 'Not inside a
+  #                             trusted directory' 에러로 코멘터리가 비어서 나옴)
+  #     --sandbox read-only   : 모델이 임의 셸 명령을 실행하지 않도록 읽기전용 (안전)
+  #     --color never         : 터미널 색상 escape 코드 제거 (출력 깔끔)
+  commentary_cmd: "codex exec --skip-git-repo-check --sandbox read-only --color never {prompt}"
+  commentary_timeout: 180      # 초. CLI 응답 대기 한도
+  commentary_enabled: true     # false면 지수 표만 생성(코멘터리 skip)
+  lookback_days: 400           # 52주 비교/YTD 위해 1년+ 확보
+
+  # 표시할 지수 목록 (group=행 그룹, name=표시명, symbol=FDR 티커)
+  #   '^' 접두사(Yahoo 소스)가 최신값 안정적 — 검증됨
+  #   중국 본토 지수(SSEC/000300)는 '^' 없는 FDR 네이티브 심볼이어야 받아짐
+  #   글로벌 주식시장 시총 상위 시장을 지역별로 수록
+  indices:
+    - { group: "한국",   name: "코스피",            symbol: "^KS11" }
+    - { group: "한국",   name: "코스닥",            symbol: "^KQ11" }
+    - { group: "미국",   name: "S&P500",           symbol: "^GSPC" }
+    - { group: "미국",   name: "나스닥",            symbol: "^IXIC" }
+    - { group: "미국",   name: "다우",              symbol: "^DJI" }
+    - { group: "미국",   name: "러셀2000",          symbol: "^RUT" }
+    - { group: "미국",   name: "필라델피아반도체",   symbol: "^SOX" }
+    - { group: "일본",   name: "니케이225",         symbol: "^N225" }
+    - { group: "중화권", name: "대만가권",          symbol: "^TWII" }
+    - { group: "중화권", name: "상해종합",          symbol: "SSEC" }
+    - { group: "중화권", name: "CSI300",           symbol: "000300" }
+    - { group: "중화권", name: "홍콩 항셍",         symbol: "^HSI" }
+    - { group: "인도",   name: "센섹스",            symbol: "^BSESN" }
+    - { group: "인도",   name: "니프티50",          symbol: "^NSEI" }
+    - { group: "유럽",   name: "유로스톡스50",      symbol: "^STOXX50E" }
+    - { group: "유럽",   name: "독일 DAX",          symbol: "^GDAXI" }
+    - { group: "유럽",   name: "영국 FTSE100",      symbol: "^FTSE" }
+    - { group: "유럽",   name: "프랑스 CAC40",      symbol: "^FCHI" }
+    - { group: "북미",   name: "캐나다 TSX",        symbol: "^GSPTSE" }
+
+  # 1-2. 주요 원자재 — FDR 선물 심볼('=F'). 검증 완료.
+  commodities:
+    - { group: "귀금속",   name: "금",        symbol: "GC=F" }
+    - { group: "귀금속",   name: "은",        symbol: "SI=F" }
+    - { group: "귀금속",   name: "플래티넘",   symbol: "PL=F" }
+    - { group: "귀금속",   name: "팔라듐",     symbol: "PA=F" }
+    - { group: "산업금속", name: "구리",       symbol: "HG=F" }
+    - { group: "에너지",   name: "WTI 원유",   symbol: "CL=F" }
+    - { group: "에너지",   name: "브렌트유",   symbol: "BZ=F" }
+    - { group: "에너지",   name: "천연가스",   symbol: "NG=F" }
+    - { group: "농산물",   name: "옥수수",     symbol: "ZC=F" }
+    - { group: "농산물",   name: "밀",        symbol: "ZW=F" }
+    - { group: "농산물",   name: "대두",       symbol: "ZS=F" }
+
+  # 1-3. 국채 금리 (네이버 금융 공개 API, 일별, 키 불필요). 등락은 bp.
+  #   code = 네이버 reutersCode (예: US10YT=RR). 품목 가감은 이 목록만 편집.
+  rates:
+    - { group: "미국",   name: "미국 2년",  code: "US2YT=RR" }
+    - { group: "미국",   name: "미국 10년", code: "US10YT=RR" }
+    - { group: "미국",   name: "미국 30년", code: "US30YT=RR" }
+    - { group: "한국",   name: "한국 3년",  code: "KR3YT=RR" }
+    - { group: "한국",   name: "한국 10년", code: "KR10YT=RR" }
+    - { group: "유럽",   name: "독일 10년", code: "DE10YT=RR" }
+    - { group: "유럽",   name: "영국 10년", code: "GB10YT=RR" }
+    - { group: "아시아", name: "일본 10년", code: "JP10YT=RR" }
+    - { group: "아시아", name: "중국 10년", code: "CN10YT=RR" }
+
+  # 1-3. 환율 (네이버 금융 공개 API). 등락은 %.
+  fx:
+    - { group: "지수",   name: "달러인덱스",   code: ".DXY" }
+    - { group: "원화",   name: "원/달러",     code: "FX_USDKRW" }
+    - { group: "원화",   name: "원/엔(100)",  code: "FX_JPYKRW" }
+    - { group: "원화",   name: "원/유로",     code: "FX_EURKRW" }
+    - { group: "원화",   name: "원/위안",     code: "FX_CNYKRW" }
