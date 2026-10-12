@@ -66,9 +66,15 @@ recap:
   # 코멘터리 생성에 사용할 CLI 명령 (LLM API 비용 0, 구독 CLI 활용).
   #   - "{prompt}" 자리표시자가 있으면 그 자리에 프롬프트가 인자로 들어감
   #   - 자리표시자가 없으면 프롬프트를 표준입력(stdin)으로 전달
-  #   예) codex:  "codex exec {prompt}"
+  #   예) codex:  "codex exec --skip-git-repo-check --sandbox read-only {prompt}"
   #       claude: "claude -p {prompt}"
-  commentary_cmd: "codex exec {prompt}"
+  #
+  #   ※ codex 플래그 설명:
+  #     --skip-git-repo-check : git 저장소 밖에서도 실행 허용 (없으면 'Not inside a
+  #                             trusted directory' 에러로 코멘터리가 비어서 나옴)
+  #     --sandbox read-only   : 모델이 임의 셸 명령을 실행하지 않도록 읽기전용 (안전)
+  #     --color never         : 터미널 색상 escape 코드 제거 (출력 깔끔)
+  commentary_cmd: "codex exec --skip-git-repo-check --sandbox read-only --color never {prompt}"
   commentary_timeout: 180      # 초. CLI 응답 대기 한도
   commentary_enabled: true     # false면 지수 표만 생성(코멘터리 skip)
   lookback_days: 400           # 52주 비교/YTD 위해 1년+ 확보

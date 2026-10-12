@@ -43,7 +43,9 @@ class RecapConfig:
     indices: List[Dict] = field(default_factory=lambda: list(DEFAULT_INDICES))
     lookback_days: int = 400  # 52주 비교 + YTD 위해 1년+ 확보
     # 코멘터리 생성 CLI. {prompt} 자리표시자가 있으면 치환, 없으면 stdin으로 전달.
-    commentary_cmd: str = "codex exec {prompt}"
+    #   codex는 git repo 밖에서도 돌도록 --skip-git-repo-check 필요.
+    commentary_cmd: str = ("codex exec --skip-git-repo-check "
+                           "--sandbox read-only --color never {prompt}")
     commentary_timeout: int = 180
     commentary_enabled: bool = True
 
@@ -230,6 +232,45 @@ def _resolve_argv(cmd_tmpl: str, use_prompt_arg: bool, prompt: str) -> List[str]
     return argv
 
 
+def _clean_codex_output(raw: str) -> str:
+    """codex exec 는 본문 앞에 세션 메타데이터(헤더)를 출력한다.
+    헤더 블록을 제거하고 실제 코멘터리 본문만 남긴다.
+
+    codex 헤더 예:
+        [2026-...] OpenAI Codex ...
+        --------
+        workdir: ...
+        model: ...
+        --------
+        <본문>
+    헤더를 식별 못 하면 원본을 그대로 반환(안전).
+    """
+    text = (raw or "").replace("\r\n", "\n").strip()
+    if not text:
+        return ""
+
+    lines = text.split("\n")
+    # 'workdir:' / 'model:' / 'provider:' 등 메타 라인과 구분선(---)을 걸러낸다.
+    meta_prefixes = ("workdir:", "model:", "provider:", "approval:", "sandbox:",
+                     "reasoning", "tokens used", "session id", "openai codex",
+                     "codex session", "user instructions")
+    # 마지막 구분선(------) 이후를 본문으로 보되, 구분선이 없으면 메타 라인만 제거
+    sep_idx = -1
+    for i, ln in enumerate(lines):
+        if set(ln.strip()) <= {"-"} and len(ln.strip()) >= 4:
+            sep_idx = i
+    if sep_idx >= 0 and sep_idx < len(lines) - 1:
+        body = "\n".join(lines[sep_idx + 1:]).strip()
+        if body:
+            return body
+    # 구분선 기반 추출 실패 시: 메타 접두어 라인만 제거
+    kept = [ln for ln in lines
+            if ln.strip().lower() not in ("",) and
+            not ln.strip().lower().startswith(meta_prefixes)]
+    cleaned = "\n".join(kept).strip()
+    return cleaned or text
+
+
 def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
     """외부 CLI로 코멘터리 생성. 반환: {text, source, ok}."""
     if not rcfg.commentary_enabled:
@@ -254,7 +295,7 @@ def generate_commentary(rows: List[Dict], rcfg: RecapConfig) -> Dict:
                 timeout=rcfg.commentary_timeout, cwd=rcfg.base_dir,
                 encoding="utf-8", errors="replace",
             )
-        out = (proc.stdout or "").strip()
+        out = _clean_codex_output(proc.stdout or "")
         if proc.returncode == 0 and out:
             return {"text": out, "source": "codex", "ok": True}
         err = (proc.stderr or "").strip()[:300]
