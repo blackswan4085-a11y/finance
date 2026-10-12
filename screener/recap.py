@@ -333,40 +333,71 @@ def _resolve_argv(cmd_tmpl: str, use_prompt_arg: bool, prompt: str) -> List[str]
 
 
 def _clean_codex_output(raw: str) -> str:
-    """codex exec 는 본문 앞에 세션 메타데이터(헤더)를 출력한다.
-    헤더 블록을 제거하고 실제 코멘터리 본문만 남긴다.
+    """codex exec 출력에서 실제 답변 본문만 추출.
 
-    codex 헤더 예:
-        [2026-...] OpenAI Codex ...
+    codex v0.160 출력 구조:
+        OpenAI Codex v0.160.0
         --------
         workdir: ...
         model: ...
         --------
-        <본문>
-    헤더를 식별 못 하면 원본을 그대로 반환(안전).
+        user
+        <질문 에코백>
+        warning: ...            (선택)
+        codex
+        <실제 답변>             ← 이 부분만 필요
+        tokens used
+        16,444
+
+    전략:
+      1) 마지막 'codex' 단독 라인 ~ 'tokens used' 라인 사이를 본문으로 추출
+      2) 실패 시: 마지막 구분선(----) 이후에서 메타/에코백/경고 라인 제거
+      3) 그래도 비면 원본 반환(안전)
     """
     text = (raw or "").replace("\r\n", "\n").strip()
     if not text:
         return ""
-
     lines = text.split("\n")
-    # 'workdir:' / 'model:' / 'provider:' 등 메타 라인과 구분선(---)을 걸러낸다.
-    meta_prefixes = ("workdir:", "model:", "provider:", "approval:", "sandbox:",
-                     "reasoning", "tokens used", "session id", "openai codex",
-                     "codex session", "user instructions")
-    # 마지막 구분선(------) 이후를 본문으로 보되, 구분선이 없으면 메타 라인만 제거
-    sep_idx = -1
+
+    def is_sep(ln: str) -> bool:
+        s = ln.strip()
+        return len(s) >= 4 and set(s) <= {"-"}
+
+    # 1) 'codex' 마커 ~ 'tokens used' 사이
+    codex_idx = -1
     for i, ln in enumerate(lines):
-        if set(ln.strip()) <= {"-"} and len(ln.strip()) >= 4:
-            sep_idx = i
-    if sep_idx >= 0 and sep_idx < len(lines) - 1:
-        body = "\n".join(lines[sep_idx + 1:]).strip()
+        if ln.strip().lower() == "codex":
+            codex_idx = i  # 마지막 것을 사용
+    if codex_idx >= 0:
+        end = len(lines)
+        for j in range(codex_idx + 1, len(lines)):
+            if lines[j].strip().lower().startswith("tokens used"):
+                end = j
+                break
+        body = "\n".join(lines[codex_idx + 1:end]).strip()
         if body:
             return body
-    # 구분선 기반 추출 실패 시: 메타 접두어 라인만 제거
-    kept = [ln for ln in lines
-            if ln.strip().lower() not in ("",) and
-            not ln.strip().lower().startswith(meta_prefixes)]
+
+    # 2) 마지막 구분선 이후 + 군더더기 제거
+    noise_prefixes = (
+        "workdir:", "model:", "provider:", "approval:", "sandbox:",
+        "reasoning", "tokens used", "session id", "openai codex",
+        "codex session", "user instructions", "warning:", "error:",
+    )
+    sep_idx = -1
+    for i, ln in enumerate(lines):
+        if is_sep(ln):
+            sep_idx = i
+    candidate = lines[sep_idx + 1:] if sep_idx >= 0 else lines
+    kept = []
+    for ln in candidate:
+        low = ln.strip().lower()
+        if low in ("", "user", "codex"):
+            if low in ("user", "codex"):
+                continue
+        if low.startswith(noise_prefixes):
+            continue
+        kept.append(ln)
     cleaned = "\n".join(kept).strip()
     return cleaned or text
 
@@ -382,22 +413,20 @@ def generate_commentary(rows: List[Dict], rcfg: RecapConfig,
     prompt = _build_prompt(rows, commodity_rows, rate_rows, fx_rows)
     cmd_tmpl = rcfg.commentary_cmd
     try:
+        # 긴 멀티라인 프롬프트를 인자로 넘기면 Windows(powershell -File)에서
+        # 인자가 유실/절단되는 문제가 있다 → stdin 전달을 기본으로 한다.
+        #   {prompt} 자리표시자가 있으면 그 자리를 '-' 로 바꿔(= codex: stdin에서 읽기)
+        #   없으면 명령 그대로 사용. 어느 경우든 프롬프트는 stdin으로 넣는다.
         if "{prompt}" in cmd_tmpl:
-            # 프롬프트를 인자로 전달
-            argv = _resolve_argv(cmd_tmpl.replace("{prompt}", "").strip(),
-                                 use_prompt_arg=True, prompt=prompt)
-            proc = subprocess.run(
-                argv, capture_output=True, text=True, timeout=rcfg.commentary_timeout,
-                cwd=rcfg.base_dir, encoding="utf-8", errors="replace",
-            )
+            cmd_for_stdin = cmd_tmpl.replace("{prompt}", "-")
         else:
-            # stdin 으로 전달
-            argv = _resolve_argv(cmd_tmpl, use_prompt_arg=False, prompt=prompt)
-            proc = subprocess.run(
-                argv, input=prompt, capture_output=True, text=True,
-                timeout=rcfg.commentary_timeout, cwd=rcfg.base_dir,
-                encoding="utf-8", errors="replace",
-            )
+            cmd_for_stdin = cmd_tmpl
+        argv = _resolve_argv(cmd_for_stdin, use_prompt_arg=False, prompt=prompt)
+        proc = subprocess.run(
+            argv, input=prompt, capture_output=True, text=True,
+            timeout=rcfg.commentary_timeout, cwd=rcfg.base_dir,
+            encoding="utf-8", errors="replace",
+        )
         out = _clean_codex_output(proc.stdout or "")
         if proc.returncode == 0 and out:
             return {"text": out, "source": "codex", "ok": True}

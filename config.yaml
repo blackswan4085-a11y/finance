@@ -64,10 +64,12 @@ usd_krw: 1400
 #   3) recap_cache.json 에 저장 후 화면 갱신
 recap:
   # 코멘터리 생성에 사용할 CLI 명령 (LLM API 비용 0, 구독 CLI 활용).
-  #   - "{prompt}" 자리표시자가 있으면 그 자리에 프롬프트가 인자로 들어감
-  #   - 자리표시자가 없으면 프롬프트를 표준입력(stdin)으로 전달
+  #   - 프롬프트는 항상 '표준입력(stdin)'으로 전달된다. (긴 프롬프트가 Windows의
+  #     powershell -File 인자 전달에서 유실되는 문제를 피하기 위함)
+  #   - "{prompt}" 자리표시자는 '-'(=stdin에서 읽기) 로 자동 치환된다.
+  #     codex는 'codex exec ... -' 형태로 stdin 프롬프트를 읽는다.
   #   예) codex:  "codex exec --skip-git-repo-check --sandbox read-only {prompt}"
-  #       claude: "claude -p {prompt}"
+  #       claude: "claude -p"   (claude는 stdin 입력도 지원)
   #
   #   ※ codex 플래그 설명:
   #     --skip-git-repo-check : git 저장소 밖에서도 실행 허용 (없으면 'Not inside a
