@@ -36,6 +36,7 @@ class Config:
     port: int = 8000
     auto_open: bool = True
     usd_krw: float = 1400.0
+    exclude_special: bool = True  # 우선주/유닛/권리 등 특수증권(보통주 아님) 제외
 
     base_dir: str = "."
 

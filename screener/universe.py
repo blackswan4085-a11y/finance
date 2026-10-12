@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 import pandas as pd
@@ -45,24 +45,61 @@ def _krx_latest_business_date() -> str:
     return datetime.strptime(date_str, "%Y%m%d").strftime("%Y-%m-%d")
 
 
+def _read_krx_csv_for_date(fdate: str) -> Optional[pd.DataFrame]:
+    """특정 날짜의 KRX 캐시 CSV를 읽어 반환. 실패/없음이면 None."""
+    url = ("https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/"
+           f"refs/heads/master/data/listing/krx/{fdate}.csv")
+    try:
+        df = pd.read_csv(url, index_col=0,
+                         dtype={"Code": str, "Dept": str, "ChangeCode": str, "MarketId": str})
+        return df.reset_index(drop=True)
+    except Exception:  # noqa: BLE001 (404 등)
+        return None
+
+
+def _is_filled(df: Optional[pd.DataFrame]) -> bool:
+    """시가총액(Marcap)이 실제로 채워진 유효한 캐시인지 확인.
+
+    주말/공휴일/장중 등에는 최근 영업일 파일이 빈 껍데기(Marcap/Close NaN)로
+    존재할 수 있으므로, 시총이 실제로 들어있는지로 유효성을 판단한다.
+    """
+    if df is None or df.empty or "Marcap" not in df.columns:
+        return False
+    return pd.to_numeric(df["Marcap"], errors="coerce").notna().sum() > 0
+
+
 def _load_krx_cache() -> pd.DataFrame:
     """FinanceData 공식 캐시 저장소에서 KRX 전체 상장 목록 CSV를 받는다.
 
     KRX 실시간 API(getJsonData.cmd)는 환경에 따라 'LOGOUT'을 반환하며 거부하므로,
     실시간 API 대신 날짜별 캐시 CSV를 직접 사용한다. 이 CSV에는 KOSPI/KOSDAQ/KONEX가
     MarketId(STK/KSQ/KNX)로 함께 들어 있다.
+
+    최근 영업일 파일에 시가총액이 비어 있으면(주말/장중 빈 파일), 시총이 채워진
+    가장 최근 날짜까지 최대 10일 거슬러 올라가며 유효한 캐시를 찾는다.
     """
     global _krx_cache_df
     if _krx_cache_df is not None:
         return _krx_cache_df
-    fdate = _krx_latest_business_date()
-    url = ("https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/"
-           f"refs/heads/master/data/listing/krx/{fdate}.csv")
-    df = pd.read_csv(url, index_col=0,
-                     dtype={"Code": str, "Dept": str, "ChangeCode": str, "MarketId": str})
-    df = df.reset_index(drop=True)
-    _krx_cache_df = df
-    return df
+
+    base = datetime.strptime(_krx_latest_business_date(), "%Y-%m-%d")
+    best = None
+    for back in range(0, 11):  # 최근 영업일부터 최대 10일 전까지
+        fdate = (base - timedelta(days=back)).strftime("%Y-%m-%d")
+        df = _read_krx_csv_for_date(fdate)
+        if df is None:
+            continue
+        if best is None:
+            best = df  # 최소한 종목 리스트는 확보 (시총 없더라도 폴백용)
+        if _is_filled(df):
+            if back > 0:
+                print(f"[universe] KRX {fdate} 캐시 사용 (최근 파일은 시총 미집계)")
+            _krx_cache_df = df
+            return df
+
+    # 시총 채워진 파일을 못 찾으면, 그나마 받은 최신 리스트라도 사용
+    _krx_cache_df = best if best is not None else pd.DataFrame()
+    return _krx_cache_df
 
 
 def _krx_listing(market: str) -> pd.DataFrame:
@@ -119,10 +156,29 @@ def _load_us_marketcap() -> dict:
     return cap
 
 
-def _normalize(df: pd.DataFrame, market: str) -> pd.DataFrame:
+# 미국 특수증권(보통주 아님) 식별용 접미사: 우선주 PR*, 유닛 U, 권리 RT, 워런트 WS,
+# When-Issued WI, 그 외 공백/점 뒤 접미사가 붙은 심볼은 거의 특수증권
+def _is_special_symbol(symbol: str) -> bool:
+    s = str(symbol).strip().upper()
+    # 공백이 들어간 심볼(예: 'BAC PRE', 'KPET U')은 우선주/유닛/권리 등
+    if " " in s:
+        return True
+    # 캐럿(^)이나 '$' 포함도 특수
+    if "^" in s or "$" in s:
+        return True
+    # 점(.) 뒤 접미사 중 특수증권 (단, .A/.B 같은 클래스주는 보통주이므로 유지)
+    if "." in s:
+        suffix = s.rsplit(".", 1)[-1]
+        if suffix in {"U", "W", "WS", "RT", "WI"} or suffix.startswith("PR"):
+            return True
+    return False
+
+
+def _normalize(df: pd.DataFrame, market: str, exclude_special: bool = True) -> pd.DataFrame:
     """다양한 StockListing 결과를 공통 스키마로 정리.
 
     공통 컬럼: symbol, name, market, country, currency
+    exclude_special=True면 우선주/유닛/권리 등 특수증권(보통주 아님)을 제외한다.
     """
     cols = {c.lower(): c for c in df.columns}
     # 심볼 컬럼 찾기 (한국: Code, 미국: Symbol)
@@ -144,10 +200,17 @@ def _normalize(df: pd.DataFrame, market: str) -> pd.DataFrame:
     else:
         out["marketcap"] = pd.NA
     out = out.dropna(subset=["symbol"]).drop_duplicates(subset=["symbol"])
+    # 특수증권(우선주/유닛/권리 등) 제외
+    if exclude_special:
+        mask = ~out["symbol"].map(_is_special_symbol)
+        removed = int((~mask).sum())
+        out = out[mask].reset_index(drop=True)
+        if removed:
+            print(f"[universe]   └ {market}: 특수증권 {removed}개 제외 (우선주/유닛/권리 등)")
     return out
 
 
-def build_universe(markets: List[str]) -> pd.DataFrame:
+def build_universe(markets: List[str], exclude_special: bool = True) -> pd.DataFrame:
     """선택된 시장들의 종목 리스트를 하나의 DataFrame으로 반환."""
     frames = []
     for m in markets:
@@ -169,7 +232,7 @@ def build_universe(markets: List[str]) -> pd.DataFrame:
         if raw is None or len(raw) == 0:
             print(f"[universe] {m} 결과 없음")
             continue
-        norm = _normalize(raw, m)
+        norm = _normalize(raw, m, exclude_special=exclude_special)
         # 미국 시장은 Nasdaq 스크리너 API 시총으로 채움
         meta = MARKET_META.get(m, {})
         if meta.get("country") == "US":

@@ -13,7 +13,7 @@ from .universe import build_universe
 
 def run_screen(cfg: Config) -> pd.DataFrame:
     # 1) 유니버스
-    uni = build_universe(cfg.markets)
+    uni = build_universe(cfg.markets, exclude_special=cfg.exclude_special)
     if uni.empty:
         print("[screen] 유니버스가 비어있습니다.")
         return pd.DataFrame()

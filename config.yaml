@@ -44,6 +44,10 @@ output_dir: "output"    # HTML 리포트 저장 폴더
 # 캐시 사용 여부. true면 당일 이미 받은 데이터는 재사용(증분 업데이트)
 use_cache: true
 
+# 특수증권 제외: true면 우선주/유닛(SPAC)/권리/워런트 등 보통주가 아닌 종목을 제외.
+#   (이런 종목은 시세 조회가 안 돼 대량 '실패'를 유발하므로 제외 권장)
+exclude_special: true
+
 # 웹서버 (python run.py 실행 시 localhost 서버로 리포트 제공)
 port: 8000              # 서버 포트
 auto_open: true         # 실행 시 브라우저 자동 열기

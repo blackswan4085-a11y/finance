@@ -11,3 +11,4 @@ _verify.py
 sectors.json
 _cachetest.py
 _preview.html
+_diag_fail.py
