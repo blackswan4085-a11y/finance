@@ -201,6 +201,16 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .sector-edit {{ background:#172030; border:1px solid var(--border); color:var(--text);
     padding:4px 7px; border-radius:5px; font-size:12px; width:130px; }}
   .sector-edit:focus {{ outline:none; border-color:var(--accent); background:#1b2740; }}
+  /* 커스텀 자동완성 (datalist의 흰색 OS 기본 목록을 대체) */
+  .ac-wrap {{ position:relative; }}
+  .ac-menu {{ display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:60;
+    min-width:100%; background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.45); max-height:240px; overflow-y:auto; }}
+  .ac-menu.open {{ display:block; }}
+  .ac-item {{ padding:7px 10px; border-radius:5px; font-size:13px; color:var(--text);
+    cursor:pointer; white-space:nowrap; }}
+  .ac-item:hover, .ac-item.active {{ background:rgba(74,158,255,.18); color:var(--accent); }}
+  .ac-empty {{ padding:7px 10px; font-size:12px; color:var(--muted); }}
   .sort-ind::after {{ content:" \25B4\25BE"; color:#3a4451; font-size:9px; }}
   th.sort-asc::after {{ content:" \25B4"; color:var(--accent); }}
   th.sort-desc::after {{ content:" \25BE"; color:var(--accent); }}
@@ -228,8 +238,9 @@ _TEMPLATE = r"""<!DOCTYPE html>
     </div>
     <div class="ctl">
       <label>섹터 필터 (입력한 섹터로 거르기)</label>
-      <input id="sectorInput" type="text" list="sectorList" placeholder="예: 반도체, 2차전지..."/>
-      <datalist id="sectorList"></datalist>
+      <div class="ac-wrap">
+        <input id="sectorInput" type="text" autocomplete="off" placeholder="예: 반도체, 2차전지..."/>
+      </div>
     </div>
     <div class="ctl">
       <label>섹터 미기입</label>
@@ -326,10 +337,7 @@ document.addEventListener('click', e => {{
 
 document.getElementById('search').addEventListener('input', e => {{ state.search=e.target.value.toLowerCase(); render(); }});
 
-// ---- 섹터 필터 입력 + 드롭다운(이미 입력한 섹터 목록) ----
-const sectorInput = document.getElementById('sectorInput');
-const sectorList = document.getElementById('sectorList');
-
+// ---- 섹터 공통 유틸 ----
 function uniqueSectors() {{
   // 현재 저장된 섹터 값들의 고유 목록 (대소문자 무시 중복 제거)
   const seen = new Set(); const out = [];
@@ -341,13 +349,58 @@ function uniqueSectors() {{
   out.sort((a,b)=>a.localeCompare(b));
   return out;
 }}
-function renderSectorOptions() {{
-  sectorList.innerHTML = uniqueSectors()
-    .map(s => `<option value="${{s.replace(/"/g,'&quot;')}}"></option>`).join('');
-}}
-renderSectorOptions();
 
-sectorInput.addEventListener('input', e => {{ state.sector = e.target.value.trim().toLowerCase(); render(); }});
+// ---- 커스텀 자동완성 (datalist 대체, 다크테마) ----
+// input 아래에 .ac-menu 패널을 띄워 추천 섹터를 보여준다.
+function attachAutocomplete(input, onPick) {{
+  const wrap = input.closest('.ac-wrap') || (() => {{
+    // 행 입력칸처럼 .ac-wrap이 없으면 즉석에서 감싼다
+    const w = document.createElement('span'); w.className = 'ac-wrap';
+    w.style.position = 'relative'; w.style.display = 'inline-block';
+    input.parentNode.insertBefore(w, input); w.appendChild(input);
+    return w;
+  }})();
+  let menu = wrap.querySelector('.ac-menu');
+  if(!menu) {{ menu = document.createElement('div'); menu.className = 'ac-menu'; wrap.appendChild(menu); }}
+  let activeIdx = -1, items = [];
+
+  function close() {{ menu.classList.remove('open'); activeIdx = -1; }}
+  function open() {{
+    const q = input.value.trim().toLowerCase();
+    const all = uniqueSectors();
+    items = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+    if(items.length === 0) {{ close(); return; }}
+    menu.innerHTML = items.map((s,i) =>
+      `<div class="ac-item${{i===activeIdx?' active':''}}" data-i="${{i}}">${{s.replace(/</g,'&lt;')}}</div>`
+    ).join('');
+    menu.classList.add('open');
+  }}
+  function pick(val) {{ input.value = val; close(); onPick(val); }}
+
+  input.addEventListener('focus', open);
+  input.addEventListener('click', open);
+  input.addEventListener('input', () => {{ activeIdx = -1; open(); }});
+  input.addEventListener('keydown', e => {{
+    if(!menu.classList.contains('open')) return;
+    if(e.key === 'ArrowDown') {{ e.preventDefault(); activeIdx = Math.min(activeIdx+1, items.length-1); open(); }}
+    else if(e.key === 'ArrowUp') {{ e.preventDefault(); activeIdx = Math.max(activeIdx-1, 0); open(); }}
+    else if(e.key === 'Enter') {{ if(activeIdx>=0) {{ e.preventDefault(); pick(items[activeIdx]); }} }}
+    else if(e.key === 'Escape') {{ close(); }}
+  }});
+  menu.addEventListener('mousedown', e => {{   // blur보다 먼저 처리되도록 mousedown
+    const it = e.target.closest('.ac-item'); if(!it) return;
+    e.preventDefault(); pick(items[parseInt(it.dataset.i)]);
+  }});
+  input.addEventListener('blur', () => setTimeout(close, 120));
+  return {{ close, open }};
+}}
+
+// 상단 섹터 필터 입력칸
+const sectorInput = document.getElementById('sectorInput');
+attachAutocomplete(sectorInput, () => {{
+  state.sector = sectorInput.value.trim().toLowerCase(); render();
+}});
+sectorInput.addEventListener('input', () => {{ state.sector = sectorInput.value.trim().toLowerCase(); render(); }});
 
 // 미기입만 보기 토글
 const noSectorChip = document.getElementById('noSectorChip');
@@ -358,7 +411,6 @@ noSectorChip.addEventListener('click', ()=>{{
 // ---- 서버에 섹터 저장 ----
 async function saveSector(symbol, sector) {{
   SECTORS[symbol] = sector;  // 로컬 즉시 반영
-  renderSectorOptions();
   if(!SERVER_MODE) return;
   try {{
     await fetch('/api/sector', {{
@@ -458,7 +510,7 @@ function cell(r, k) {{
   if(k==='aligned') return r.aligned ? '<span class="aligned-yes">정배열</span>' : '<span class="no">-</span>';
   if(k==='sector') {{
     const v = (SECTORS[r.symbol]||'').replace(/"/g,'&quot;');
-    return `<input class="sector-edit" data-sym="${{r.symbol}}" list="sectorList" `
+    return `<input class="sector-edit" data-sym="${{r.symbol}}" autocomplete="off" `
       + `value="${{v}}" placeholder="섹터 입력..." />`;
   }}
   if(k==='high_count') return `<span class="num">${{r.high_count}}</span>`;
@@ -509,6 +561,17 @@ tbodyEl.addEventListener('change', e => {{
   const inp = e.target.closest('.sector-edit');
   if(!inp) return;
   saveSector(inp.dataset.sym, inp.value.trim());
+}});
+// 행 섹터 입력칸: 포커스되면 커스텀 자동완성 1회 연결 (테이블은 매번 재렌더됨)
+tbodyEl.addEventListener('focusin', e => {{
+  const inp = e.target.closest('.sector-edit');
+  if(!inp) return;
+  if(!inp.dataset.acReady) {{
+    inp.dataset.acReady = '1';
+    inp._ac = attachAutocomplete(inp, (val) => saveSector(inp.dataset.sym, val));
+  }}
+  // 지금 발생한 포커스 이벤트는 attach 전이라 놓치므로 즉시 한 번 연다
+  if(inp._ac) inp._ac.open();
 }});
 
 render();
