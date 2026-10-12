@@ -99,10 +99,42 @@ macOS/Linux cron 예시 — 평일 아침 8시 실행:
 `screener/config.py`의 `MARKET_META`와 `screener/universe.py`의 `_LISTING_CODE`에
 FinanceDataReader가 지원하는 시장 코드를 추가하면 됩니다.
 
+## 📊 주간 시장 Recap (`/recap`)
+
+주요 글로벌 지수의 주간 성과를 한눈에 보여주고, **LLM API 비용 없이** 구독 중인
+CLI(예: Codex)로 "Editor's Comment"를 자동 생성하는 페이지입니다.
+
+서버 실행 후 **http://localhost:8000/recap** 접속 → **[🔄 업데이트]** 버튼 클릭 시:
+
+1. FDR로 주요 지수 데이터 수집 (현재가, 1W/1M/3M/YTD 등락률, 52주 고점 대비, 60일 추이 스파크라인)
+2. `config.yaml`의 `recap.commentary_cmd` 로 코멘터리 생성 (기본 `codex exec {prompt}`)
+3. `recap_cache.json` 에 저장 → 서버 재시작/재접속 시에도 즉시 표시
+
+- **[데이터만]** 버튼: 코멘터리 없이 지수 표만 빠르게 새로고침
+- 상승=빨강 / 하락=파랑(한국식) 색상 표기
+
+### 코멘터리 CLI 설정 (`config.yaml`의 `recap:` 섹션)
+
+```yaml
+recap:
+  commentary_cmd: "codex exec {prompt}"   # {prompt}=인자로 전달 / 없으면 stdin으로 전달
+  commentary_timeout: 180                 # 초
+  commentary_enabled: true                # false면 지수 표만 생성
+  indices: [ ... ]                        # 표시할 지수/티커 (기본 9개)
+```
+
+- Codex 외 다른 CLI도 사용 가능 — 예: `"claude -p {prompt}"`
+- `{prompt}` 자리표시자가 있으면 프롬프트를 **인자**로, 없으면 **표준입력(stdin)** 으로 전달합니다.
+- 지수 티커는 `^` 접두사(Yahoo 소스)로 통일해야 최신값이 안정적입니다 (예: `^KS11`, `^SOX`, `^TWII`).
+
+> 코멘터리 생성은 설치된 CLI 구독으로 처리되므로 **별도 LLM API 토큰 비용이 들지 않습니다.**
+> CLI가 설치돼 있지 않거나 실패하면 지수 표는 정상 생성되고 코멘터리 영역에 안내 문구가 표시됩니다.
+
 ## 데이터 소스
 
 [FinanceDataReader](https://github.com/FinanceData/FinanceDataReader) (무료, 증권사 API 불필요).
 일봉을 받아 주봉(금요일 마감)으로 리샘플링하여 지표를 계산합니다.
+Recap의 지수 데이터도 동일하게 FDR(Yahoo 소스)로 수집합니다.
 
 ## 성능 참고
 

@@ -54,3 +54,34 @@ auto_open: true         # 실행 시 브라우저 자동 열기
 
 # 환율: 시가총액 정렬 시 원화를 달러로 환산해 공통 비교하기 위한 기준 (1달러 = N원)
 usd_krw: 1400
+
+# ==========================================================
+#  주간 시장 Recap (/recap 페이지)
+# ==========================================================
+# 서버 실행 후 http://localhost:8000/recap 에서 [업데이트] 클릭 시
+#   1) FDR로 주요 지수 데이터 수집(현재가, 1W/1M/3M/YTD, 52주 고점 대비)
+#   2) 아래 commentary_cmd 로 코멘터리(Editor's Comment) 생성
+#   3) recap_cache.json 에 저장 후 화면 갱신
+recap:
+  # 코멘터리 생성에 사용할 CLI 명령 (LLM API 비용 0, 구독 CLI 활용).
+  #   - "{prompt}" 자리표시자가 있으면 그 자리에 프롬프트가 인자로 들어감
+  #   - 자리표시자가 없으면 프롬프트를 표준입력(stdin)으로 전달
+  #   예) codex:  "codex exec {prompt}"
+  #       claude: "claude -p {prompt}"
+  commentary_cmd: "codex exec {prompt}"
+  commentary_timeout: 180      # 초. CLI 응답 대기 한도
+  commentary_enabled: true     # false면 지수 표만 생성(코멘터리 skip)
+  lookback_days: 400           # 52주 비교/YTD 위해 1년+ 확보
+
+  # 표시할 지수 목록 (group=행 그룹, name=표시명, symbol=FDR 티커)
+  #   '^' 접두사(Yahoo 소스)가 최신값 안정적 — 검증됨
+  indices:
+    - { group: "한국",   name: "코스피",            symbol: "^KS11" }
+    - { group: "한국",   name: "코스닥",            symbol: "^KQ11" }
+    - { group: "미국",   name: "S&P500",           symbol: "^GSPC" }
+    - { group: "미국",   name: "나스닥",            symbol: "^IXIC" }
+    - { group: "미국",   name: "다우",              symbol: "^DJI" }
+    - { group: "미국",   name: "러셀2000",          symbol: "^RUT" }
+    - { group: "미국",   name: "필라델피아반도체",   symbol: "^SOX" }
+    - { group: "아시아", name: "니케이225",         symbol: "^N225" }
+    - { group: "아시아", name: "대만가권",          symbol: "^TWII" }
