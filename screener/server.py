@@ -29,6 +29,10 @@ def _build_recap_config(cfg: Config) -> RecapConfig:
             rcfg.indices = raw["indices"]
         if raw.get("commodities"):
             rcfg.commodities = raw["commodities"]
+        if raw.get("rates"):
+            rcfg.rates = raw["rates"]
+        if raw.get("fx"):
+            rcfg.fx = raw["fx"]
         if raw.get("lookback_days"):
             rcfg.lookback_days = int(raw["lookback_days"])
         if raw.get("commentary_cmd"):

@@ -47,9 +47,48 @@ def _group_rows(rows: List[Dict]) -> str:
     return "\n".join(out)
 
 
+def _delta_cell(v: Optional[float], unit: str) -> str:
+    """금리(bp)/환율(%) 등락 셀."""
+    if v is None:
+        return '<td class="pct na">-</td>'
+    cls = "up" if v >= 0 else "down"
+    txt = f"{v:+.0f}bp" if unit == "bp" else f"{v:+.2f}%"
+    return f'<td class="pct {cls}">{txt}</td>'
+
+
+def _ratefx_rows(rows: List[Dict], val_fmt: str) -> str:
+    """금리/환율 표 본문. val_fmt: 가격 소수 자리수 포맷(예: '{:.3f}')."""
+    out = []
+    prev_group = None
+    group_counts: Dict[str, int] = {}
+    for r in rows:
+        group_counts[r["group"]] = group_counts.get(r["group"], 0) + 1
+    for r in rows:
+        tds = []
+        if r["group"] != prev_group:
+            tds.append(f'<td class="grp" rowspan="{group_counts[r["group"]]}">'
+                       f'{html.escape(r["group"])}</td>')
+            prev_group = r["group"]
+        unit = r.get("unit", "")
+        name = html.escape(r["name"])
+        date = html.escape(str(r.get("date", "-")))
+        tds.append(f'<td class="name">{name}<span class="dt">{date}</span></td>')
+        price = r.get("price")
+        pstr = val_fmt.format(price) if price is not None else "-"
+        tds.append(f'<td class="price">{pstr}</td>')
+        tds.append(_delta_cell(r.get("chg_1w"), unit))
+        tds.append(_delta_cell(r.get("chg_1m"), unit))
+        tds.append(_delta_cell(r.get("chg_3m"), unit))
+        tds.append(f'<td class="spark-cell">{r.get("spark", "")}</td>')
+        out.append("<tr>" + "".join(tds) + "</tr>")
+    return "\n".join(out)
+
+
 def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
     rows = payload.get("rows", []) if payload else []
     commodities = payload.get("commodities", []) if payload else []
+    rates = payload.get("rates", []) if payload else []
+    fx = payload.get("fx", []) if payload else []
     commentary = payload.get("commentary", {}) if payload else {}
     generated_at = payload.get("generated_at", "아직 생성되지 않음") if payload else "아직 생성되지 않음"
 
@@ -60,6 +99,12 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
     commodity_body = _group_rows(commodities) if commodities else (
         '<tr><td colspan="9" class="empty">아직 원자재 데이터가 없습니다. '
         '[업데이트] 버튼을 눌러 생성하세요.</td></tr>'
+    )
+    rates_body = _ratefx_rows(rates, "{:.3f}") if rates else (
+        '<tr><td colspan="7" class="empty">아직 금리 데이터가 없습니다.</td></tr>'
+    )
+    fx_body = _ratefx_rows(fx, "{:,.2f}") if fx else (
+        '<tr><td colspan="7" class="empty">아직 환율 데이터가 없습니다.</td></tr>'
     )
 
     comm_text = html.escape(commentary.get("text", "") or "")
@@ -166,6 +211,31 @@ def render_recap_html(payload: Optional[Dict], server_mode: bool = True) -> str:
       </tr></thead>
       <tbody id="tbody-cmdty">
 {commodity_body}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span>1-3. 국채 금리 &amp; 환율</span>
+      <span class="meta">금리 등락=bp · 환율 등락=% · 출처: 네이버 금융</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th></th><th style="text-align:left">국채 금리(%)</th><th>금리</th>
+        <th>1W</th><th>1M</th><th>3M</th><th>추이(60일)</th>
+      </tr></thead>
+      <tbody id="tbody-rates">
+{rates_body}
+      </tbody>
+    </table>
+    <table style="border-top:1px solid var(--line)">
+      <thead><tr>
+        <th></th><th style="text-align:left">환율</th><th>현재가</th>
+        <th>1W</th><th>1M</th><th>3M</th><th>추이(60일)</th>
+      </tr></thead>
+      <tbody id="tbody-fx">
+{fx_body}
       </tbody>
     </table>
   </div>

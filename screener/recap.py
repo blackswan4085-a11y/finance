@@ -20,6 +20,8 @@ from typing import Dict, List, Optional
 import pandas as pd
 import FinanceDataReader as fdr
 
+from . import naver
+
 
 # ----------------------------------------------------------------------------
 # 지수 정의 (그룹 → [(표시명, FDR 티커)]) — 검증된 '^' 접두사 티커
@@ -65,11 +67,37 @@ DEFAULT_COMMODITIES: List[Dict] = [
 ]
 
 
+# ----------------------------------------------------------------------------
+# 1-3. 국채 금리 / 환율 — 네이버 금융 공개 API (일별, 키 불필요). 검증 완료.
+# ----------------------------------------------------------------------------
+DEFAULT_RATES: List[Dict] = [
+    {"group": "미국", "name": "미국 2년",  "code": "US2YT=RR"},
+    {"group": "미국", "name": "미국 10년", "code": "US10YT=RR"},
+    {"group": "미국", "name": "미국 30년", "code": "US30YT=RR"},
+    {"group": "한국", "name": "한국 3년",  "code": "KR3YT=RR"},
+    {"group": "한국", "name": "한국 10년", "code": "KR10YT=RR"},
+    {"group": "유럽", "name": "독일 10년", "code": "DE10YT=RR"},
+    {"group": "유럽", "name": "영국 10년", "code": "GB10YT=RR"},
+    {"group": "아시아", "name": "일본 10년", "code": "JP10YT=RR"},
+    {"group": "아시아", "name": "중국 10년", "code": "CN10YT=RR"},
+]
+
+DEFAULT_FX: List[Dict] = [
+    {"group": "지수",  "name": "달러인덱스",  "code": ".DXY"},
+    {"group": "원화",  "name": "원/달러",    "code": "FX_USDKRW"},
+    {"group": "원화",  "name": "원/엔(100)", "code": "FX_JPYKRW"},
+    {"group": "원화",  "name": "원/유로",    "code": "FX_EURKRW"},
+    {"group": "원화",  "name": "원/위안",    "code": "FX_CNYKRW"},
+]
+
+
 @dataclass
 class RecapConfig:
     base_dir: str = "."
     indices: List[Dict] = field(default_factory=lambda: list(DEFAULT_INDICES))
     commodities: List[Dict] = field(default_factory=lambda: list(DEFAULT_COMMODITIES))
+    rates: List[Dict] = field(default_factory=lambda: list(DEFAULT_RATES))
+    fx: List[Dict] = field(default_factory=lambda: list(DEFAULT_FX))
     lookback_days: int = 400  # 52주 비교 + YTD 위해 1년+ 확보
     # 코멘터리 생성 CLI. {prompt} 자리표시자가 있으면 치환, 없으면 stdin으로 전달.
     #   codex는 git repo 밖에서도 돌도록 --skip-git-repo-check 필요.
@@ -220,23 +248,49 @@ def _rows_to_lines(rows: List[Dict]) -> str:
     return "\n".join(lines)
 
 
-def _build_prompt(index_rows: List[Dict], commodity_rows: Optional[List[Dict]] = None) -> str:
+def _rate_fx_lines(rows: List[Dict]) -> str:
+    lines = []
+    for r in rows:
+        if r.get("error") or r.get("price") is None:
+            continue
+        unit = r.get("unit", "")
+        def d(v):
+            if not isinstance(v, (int, float)):
+                return "N/A"
+            return f"{v:+.0f}bp" if unit == "bp" else f"{v:+.2f}%"
+        lines.append(
+            f"- [{r['group']}] {r['name']}: {r['price']:,.3f} "
+            f"(1W {d(r['chg_1w'])}, 1M {d(r['chg_1m'])}, 3M {d(r['chg_3m'])})"
+        )
+    return "\n".join(lines)
+
+
+def _build_prompt(index_rows: List[Dict], commodity_rows: Optional[List[Dict]] = None,
+                  rate_rows: Optional[List[Dict]] = None,
+                  fx_rows: Optional[List[Dict]] = None) -> str:
     index_block = _rows_to_lines(index_rows)
     commodity_block = _rows_to_lines(commodity_rows or [])
+    rate_block = _rate_fx_lines(rate_rows or [])
+    fx_block = _rate_fx_lines(fx_rows or [])
     parts = [
-        "너는 금융 시장 애널리스트다. 아래는 지난주 주요 글로벌 지수와 원자재의 주간 성과 데이터다.\n"
+        "너는 금융 시장 애널리스트다. 아래는 지난주 주요 글로벌 지수·원자재·국채금리·환율 데이터다.\n"
         "이 데이터를 바탕으로 한국어로 '지난주 시장 Recap - Editor's Comment'를 작성하라.\n\n"
         "요구사항:\n"
-        "- 4~5개 문단, 각 문단은 2~4문장\n"
+        "- 4~6개 문단, 각 문단은 2~4문장\n"
         "- 첫 문단: 지난주 전체 시장을 한 문장으로 요약 후 핵심 지수 등락 설명\n"
-        "- 중간 문단: 눈에 띄는 지수(강세/약세), 섹터, 지역별 대비\n"
-        "- 원자재 문단: 귀금속·에너지·농산물 등 원자재 흐름과 그 의미(인플레·경기 신호 등)\n"
+        "- 지수 문단: 눈에 띄는 지수(강세/약세), 섹터, 지역별 대비\n"
+        "- 원자재 문단: 귀금속·에너지·농산물 흐름과 의미(인플레·경기 신호 등)\n"
+        "- 금리/환율 문단: 국채금리 변화(bp)와 환율 흐름이 주는 신호(통화정책·위험선호 등)\n"
         "- 마지막 문단: 길게 본 추세(52주 고점 대비, YTD)와 전망/주목 포인트\n"
         "- 과장·투자권유 금지. 수치는 데이터에 있는 것만 사용. 마크다운 기호 없이 평문으로.\n\n"
         f"[주요 지수]\n{index_block}\n",
     ]
     if commodity_block:
         parts.append(f"\n[주요 원자재]\n{commodity_block}\n")
+    if rate_block:
+        parts.append(f"\n[국채 금리] (등락 bp)\n{rate_block}\n")
+    if fx_block:
+        parts.append(f"\n[환율] (등락 %)\n{fx_block}\n")
     return "".join(parts)
 
 
@@ -318,12 +372,14 @@ def _clean_codex_output(raw: str) -> str:
 
 
 def generate_commentary(rows: List[Dict], rcfg: RecapConfig,
-                        commodity_rows: Optional[List[Dict]] = None) -> Dict:
+                        commodity_rows: Optional[List[Dict]] = None,
+                        rate_rows: Optional[List[Dict]] = None,
+                        fx_rows: Optional[List[Dict]] = None) -> Dict:
     """외부 CLI로 코멘터리 생성. 반환: {text, source, ok}."""
     if not rcfg.commentary_enabled:
         return {"text": "", "source": "disabled", "ok": False}
 
-    prompt = _build_prompt(rows, commodity_rows)
+    prompt = _build_prompt(rows, commodity_rows, rate_rows, fx_rows)
     cmd_tmpl = rcfg.commentary_cmd
     try:
         if "{prompt}" in cmd_tmpl:
@@ -388,16 +444,21 @@ def save_recap(rcfg: RecapConfig, payload: Dict) -> None:
 
 
 def refresh_recap(rcfg: RecapConfig, with_commentary: bool = True) -> Dict:
-    """지수+원자재 데이터 수집 + (선택)코멘터리 생성 → 캐시 저장 → payload 반환."""
+    """지수+원자재+금리+환율 수집 + (선택)코멘터리 생성 → 캐시 저장 → payload 반환."""
     rows = collect_indices(rcfg)
     commodities = collect_commodities(rcfg)
+    rates = naver.collect_rates(rcfg.rates)
+    fx = naver.collect_fx(rcfg.fx)
     commentary = {"text": "", "source": "", "ok": False}
     if with_commentary:
-        commentary = generate_commentary(rows, rcfg, commodity_rows=commodities)
+        commentary = generate_commentary(rows, rcfg, commodity_rows=commodities,
+                                         rate_rows=rates, fx_rows=fx)
     payload = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "rows": rows,
         "commodities": commodities,
+        "rates": rates,
+        "fx": fx,
         "commentary": commentary,
     }
     save_recap(rcfg, payload)
