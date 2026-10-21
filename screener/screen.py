@@ -13,8 +13,9 @@ from .instruments import InstrumentStore
 from .weekly import previous_week_friday
 
 
-def run_screen(cfg: Config, asof_date=None, progress=None) -> pd.DataFrame:
-    """progress: callable(done, total) — 주가 수집 진행 콜백(웹 진행바용). 선택."""
+def run_screen(cfg: Config, asof_date=None, progress=None, offline=False) -> pd.DataFrame:
+    """progress: callable(done, total) — 주가 수집 진행 콜백(웹 진행바용). 선택.
+    offline: True 면 캐시 있는 종목은 증분 갱신 없이 재사용(과거 backfill용, 다운로드 최소)."""
     asof_date = asof_date or previous_week_friday()
     # 1) 유니버스
     uni = build_universe(cfg.markets, exclude_special=cfg.exclude_special)
@@ -33,7 +34,8 @@ def run_screen(cfg: Config, asof_date=None, progress=None) -> pd.DataFrame:
     cap_map = dict(zip(uni["symbol"], uni.get("marketcap", pd.Series(pd.NA, index=uni.index))))
 
     # 2) 데이터 다운로드 (일봉, 캐시)
-    data = download_all(list(uni["symbol"]), cfg, label="OHLCV", asof_date=asof_date, progress=progress)
+    data = download_all(list(uni["symbol"]), cfg, label="OHLCV", asof_date=asof_date,
+                        progress=progress, offline=offline)
     print(f"[screen] {len(data)} 종목 데이터 확보")
     if not data:
         raise RuntimeError("주가 데이터를 한 종목도 가져오지 못했습니다. 네트워크와 데이터 공급자를 확인해 주세요.")

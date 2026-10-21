@@ -48,8 +48,13 @@ def _fetched_today(path: str) -> bool:
 
 
 def _load_or_update(symbol: str, start: str, cache_dir: str, use_cache: bool,
-                    sleep: float):
-    """반환: (DataFrame|None, status) — status in {'cache','update','new','fail'}."""
+                    sleep: float, offline: bool = False):
+    """반환: (DataFrame|None, status) — status in {'cache','update','new','fail'}.
+
+    offline=True 면 캐시가 있을 때 증분 갱신 없이 그대로 재사용한다(네트워크 0).
+    과거 기준 backfill 처럼 '이미 받은 과거 데이터로 충분'한 경우에 쓴다. 캐시가
+    아예 없는 종목만 새로 내려받는다.
+    """
     path = _cache_file(cache_dir, symbol)
     cached: Optional[pd.DataFrame] = None
     if use_cache and os.path.exists(path):
@@ -60,6 +65,9 @@ def _load_or_update(symbol: str, start: str, cache_dir: str, use_cache: bool,
             cached = None
 
     if cached is not None and not cached.empty:
+        # offline: 과거 계산이면 최신 증분이 필요 없으므로 캐시를 그대로 사용(다운로드 0).
+        if offline:
+            return cached, "cache"
         # 오늘 이미 받은 캐시면 네트워크 없이 즉시 재사용
         # (주말/공휴일/장중이라 '최근 거래일'이 어제보다 과거여도 그날 한 번만 받으면 됨)
         if use_cache and _fetched_today(path):
@@ -105,10 +113,12 @@ def to_weekly(df: pd.DataFrame) -> pd.DataFrame:
     return wk
 
 
-def download_all(symbols, cfg, label: str = "다운로드", asof_date=None, progress=None) -> Dict[str, pd.DataFrame]:
+def download_all(symbols, cfg, label: str = "다운로드", asof_date=None, progress=None,
+                 offline: bool = False) -> Dict[str, pd.DataFrame]:
     """심볼 리스트의 일봉을 병렬 다운로드하여 {symbol: df} 반환.
 
     progress: callable(done:int, total:int) — 진행 상황 콜백(웹 진행바용). 선택.
+    offline: True 면 캐시가 있는 종목은 증분 갱신 없이 그대로 사용(과거 backfill용).
     """
     exclusions = load_exclusions(cfg.base_dir)['instruments']
     symbols = [symbol for symbol in symbols if not exclusion_reason(cfg.base_dir,
@@ -118,7 +128,8 @@ def download_all(symbols, cfg, label: str = "다운로드", asof_date=None, prog
     results: Dict[str, pd.DataFrame] = {}
 
     def task(sym):
-        df, status = _load_or_update(sym, start, cfg.cache_path, cfg.use_cache, cfg.request_sleep)
+        df, status = _load_or_update(sym, start, cfg.cache_path, cfg.use_cache,
+                                     cfg.request_sleep, offline=offline)
         return sym, df, status
 
     counts = {"cache": 0, "update": 0, "new": 0, "fail": 0}
