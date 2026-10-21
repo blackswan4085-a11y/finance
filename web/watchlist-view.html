@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>관심종목 · Finance</title><link rel="stylesheet" href="/ui.css"><script src="/ui.js"></script><script src="/watchlist-view.js" defer></script></head>
+<body class="finance-settings finance-watchlist">
+<header class="finance-header"><div class="finance-brand"><span class="brand-mark" aria-hidden="true">▥</span><h1>관심종목</h1></div><div class="header-actions"><nav class="finance-nav" aria-label="화면 이동"></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="테마 변경">☾</button></div></header>
+<main class="watchlist-workspace">
+  <section class="card">
+    <form id="addForm" class="watchlist-add">
+      <input id="addInput" type="text" placeholder="종목 코드 또는 이름 (예: 005930, AAPL, 삼성전자)" aria-label="추가할 종목" autocomplete="off">
+      <button type="submit">추가</button>
+    </form>
+    <p class="muted">코드·이름으로 검색해 관심종목에 추가합니다. 저장은 사용자 PC의 watchlist.json 파일에 보존됩니다.</p>
+    <div id="message" class="update-status" role="status" aria-live="polite" style="display:none"></div>
+  </section>
+  <section class="card">
+    <div class="table-wrap">
+      <table class="watchlist-table">
+        <thead><tr><th>종목명</th><th>코드</th><th>시장</th><th>삭제</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="muted" style="display:none">아직 관심종목이 없습니다. 위에서 종목을 추가해 보세요.</p>
+  </section>
+</main></body></html>

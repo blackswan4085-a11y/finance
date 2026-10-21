@@ -22,6 +22,7 @@ from .instruments import InstrumentStore
 from .config import Config
 from .report import build_records, render_html
 from .sectors import load_sectors, set_sector
+from . import watchlist
 from .sector_classification import classification_rows
 from .sector_etfs import load_sector_etfs, sector_etf_settings, save_sector_etfs, chart_defaults
 from .recap import RecapConfig, DEFAULT_INDICES, load_recap, refresh_recap
@@ -240,6 +241,16 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                 ctype = "text/html; charset=utf-8" if route == "/industries" else "text/javascript; charset=utf-8"
                 with open(os.path.join(web_dir, filename), "rb") as stream:
                     self._send(200, stream.read(), ctype)
+            elif route in ("/watchlist", "/watchlist-view.js"):
+                filename = "watchlist-view.html" if route == "/watchlist" else route.lstrip("/")
+                ctype = "text/html; charset=utf-8" if route == "/watchlist" else "text/javascript; charset=utf-8"
+                with open(os.path.join(web_dir, filename), "rb") as stream:
+                    self._send(200, stream.read(), ctype)
+            elif route == "/api/watchlist":
+                try:
+                    self._send(200, json.dumps(watchlist.load(base_dir), ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
+                    self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
             elif route == "/chart":
                 with open(chart_page_path, "rb") as f:
                     self._send(200, f.read())
@@ -346,6 +357,26 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                 return
             if parsed.path.startswith("/api/jp-customs/"):
                 self._trade_request(jp_customs, "/api/jp-customs/", "POST", parsed)
+                return
+            if parsed.path in ("/api/watchlist/add", "/api/watchlist/remove"):
+                try:
+                    origin = self.headers.get("Origin")
+                    if origin and origin != "http://" + self.headers.get("Host", ""):
+                        self._send(403, '{"error":"허용되지 않은 요청입니다."}', "application/json; charset=utf-8")
+                        return
+                    length = int(self.headers.get("Content-Length", 0))
+                    if not 0 < length <= 4096:
+                        raise ValueError("요청 크기를 확인해 주세요.")
+                    payload = json.loads(self.rfile.read(length))
+                    if not isinstance(payload, dict):
+                        raise ValueError("JSON 객체로 요청해 주세요.")
+                    if parsed.path.endswith("/add"):
+                        items = watchlist.add(base_dir, store, str(payload.get("symbol", "")))
+                    else:
+                        items = watchlist.remove(base_dir, str(payload.get("symbol", "")), str(payload.get("country", "")))
+                    self._send(200, json.dumps({"ok": True, "items": items}, ensure_ascii=False), "application/json; charset=utf-8")
+                except (OSError, ValueError, TypeError) as exc:
+                    self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
                 return
             if self.path.startswith("/api/earnings/"):
                 try:
