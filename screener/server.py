@@ -33,6 +33,7 @@ from .weekly import previous_week_friday
 from .industry import IndustryStore, ensure_dataset
 from .earnings import EarningsService, EarningsConflict
 from .screen_cache import read_screen_cache, publish_screen_cache
+from . import alignment_changes
 from .customs.service import CustomsService
 from .customs.report import page_html as customs_page_html
 from .us_customs.service import UsCustomsService
@@ -139,6 +140,11 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
         try:
             fresh_df = run_screen(cfg, asof_date=asof_date)
             cached = publish_screen_cache(screen_cache_path, fresh_df, asof_date)
+            # 정배열 종목 스냅샷 저장(주간 신규/이탈 비교용). 실패해도 스크린 결과엔 영향 없음.
+            try:
+                alignment_changes.record(base_dir, fresh_df, cached["asof_date"])
+            except Exception:  # noqa: BLE001
+                pass
             generated_at = cached["generated_at"]
             with screen_state_lock:
                 screen_df, screen_asof, screen_generated_at = fresh_df, cached["asof_date"], generated_at
@@ -209,6 +215,16 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                     self._send(200, stream.read(), ctype)
             elif route in ("/weekly", "/weekly/"):
                 self._send(200, current_html())
+            elif route in ("/weekly/changes", "/alignment-changes-view.js"):
+                filename = "alignment-changes-view.html" if route == "/weekly/changes" else route.lstrip("/")
+                ctype = "text/html; charset=utf-8" if route == "/weekly/changes" else "text/javascript; charset=utf-8"
+                with open(os.path.join(web_dir, filename), "rb") as stream:
+                    self._send(200, stream.read(), ctype)
+            elif route == "/api/alignment-changes":
+                try:
+                    self._send(200, json.dumps(alignment_changes.changes(base_dir), ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
+                    self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
             elif route in ("/api/earnings", "/api/earnings/project"):
                 try:
                     result = earnings.list() if route == "/api/earnings" else earnings.get(parse_qs(parsed.query).get("id", [""])[0])
@@ -387,6 +403,19 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                         items = watchlist.remove(base_dir, str(payload.get("symbol", "")), str(payload.get("country", "")))
                     self._send(200, json.dumps({"ok": True, "items": items}, ensure_ascii=False), "application/json; charset=utf-8")
                 except (OSError, ValueError, TypeError) as exc:
+                    self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
+                return
+            if parsed.path == "/api/alignment-changes/backfill":
+                try:
+                    origin = self.headers.get("Origin")
+                    if origin and origin != "http://" + self.headers.get("Host", ""):
+                        self._send(403, '{"error":"허용되지 않은 요청입니다."}', "application/json; charset=utf-8")
+                        return
+                    # 과거 2주 기준 정배열 재계산(전체 종목 스캔 — 수십 초 소요). 완료 후 비교 반환.
+                    alignment_changes.backfill(base_dir, cfg, weeks=2)
+                    result = alignment_changes.changes(base_dir)
+                    self._send(200, json.dumps({"ok": True, **result}, ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
                     self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
                 return
             if parsed.path == "/api/earnings-calendar/refresh":
