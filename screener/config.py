@@ -17,6 +17,7 @@ MARKET_META = {
     "NASDAQ": {"country": "US", "currency": "USD"},
     "NYSE": {"country": "US", "currency": "USD"},
     "AMEX": {"country": "US", "currency": "USD"},
+    "TSE": {"country": "JP", "currency": "JPY"},  # 도쿄증권거래소(일본)
 }
 
 
@@ -36,6 +37,7 @@ class Config:
     port: int = 8000
     auto_open: bool = True
     usd_krw: float = 1400.0
+    usd_jpy: float = 150.0  # 1달러당 엔(일본 시총을 달러로 환산해 한·미·일 함께 정렬)
     exclude_special: bool = True  # 우선주/유닛/권리 등 특수증권(보통주 아님) 제외
 
     # 주간 시장 Recap 설정 (config.yaml의 recap: 섹션). dict 그대로 보관.

@@ -47,7 +47,7 @@ def remember_exclusions(base_dir, rows):
             symbol = str(row.get('symbol', '')).strip().upper()
             reason = detected_reason(country, symbol, row.get('name', ''), row.get('asset_type', 'STOCK'))
             key = country + ':' + symbol
-            if reason and country in {'KR', 'US'} and re.fullmatch(r'[A-Z0-9][A-Z0-9./_-]{0,24}', symbol) and key not in data['instruments']:
+            if reason and country in {'KR', 'US', 'JP'} and re.fullmatch(r'[A-Z0-9][A-Z0-9./_-]{0,24}', symbol) and key not in data['instruments']:
                 data['instruments'][key] = {'country': country, 'symbol': symbol,
                     'name': row.get('name', symbol), 'reason': reason,
                     'reviewed_at': datetime.now().isoformat(timespec='seconds'), 'basis': '상장 목록의 증권 유형·명칭'}
