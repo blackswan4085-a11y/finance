@@ -411,8 +411,16 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                     if origin and origin != "http://" + self.headers.get("Host", ""):
                         self._send(403, '{"error":"허용되지 않은 요청입니다."}', "application/json; charset=utf-8")
                         return
-                    # 과거 2주 기준 정배열 재계산(전체 종목 스캔 — 수십 초 소요). 완료 후 비교 반환.
-                    alignment_changes.backfill(base_dir, cfg, weeks=2)
+                    # 이미 진행 중이면 재실행 않고 안내(버튼 재클릭 방지).
+                    if alignment_changes.backfill_running():
+                        self._send(409, json.dumps({"ok": False, "error": "이미 생성이 진행 중입니다. 완료될 때까지 기다려 주세요."}, ensure_ascii=False), "application/json; charset=utf-8")
+                        return
+                    # 과거 2주 기준 정배열 재계산(전체 종목 스캔 — 캐시 없으면 최초 1회 수십 분).
+                    # 주가 다운로드는 첫 주차에서 1회만, 둘째 주차는 같은 날 캐시 재사용.
+                    outcome = alignment_changes.backfill(base_dir, cfg, weeks=2)
+                    if outcome.get("busy"):
+                        self._send(409, json.dumps({"ok": False, "error": "이미 생성이 진행 중입니다."}, ensure_ascii=False), "application/json; charset=utf-8")
+                        return
                     result = alignment_changes.changes(base_dir)
                     self._send(200, json.dumps({"ok": True, **result}, ensure_ascii=False), "application/json; charset=utf-8")
                 except Exception as exc:  # noqa: BLE001

@@ -77,33 +77,52 @@ def has_comparison(base_dir: str) -> bool:
     return len(_load(base_dir)) >= 2
 
 
+_backfill_lock = threading.Lock()
+_backfill_running = False
+
+
+def backfill_running() -> bool:
+    return _backfill_running
+
+
 def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
     """저장된 스냅샷이 부족할 때, 과거 주(금요일) 기준으로 정배열을 재계산해 채운다.
 
-    이미 2년치 주가 캐시가 있으므로 다운로드 없이 과거 기준 정배열을 다시 계산할 수 있다.
-    가장 최근 'weeks'개 주(금요일)에 대해, 해당 기준일 스냅샷이 없으면 run_screen 으로
-    재계산해 저장한다. 반환: {created: [asof...], skipped: [asof...]}.
+    첫 주차 계산에서 전 종목 주가를 받아 캐시에 저장하면, 나머지 주차는 같은 날
+    같은 캐시를 재사용하므로 다운로드는 1회로 끝난다(data._load_or_update 의
+    '오늘 받은 캐시 재사용'). 전 종목 스캔이라 캐시가 비어 있으면 최초 1회는
+    수십 분 걸릴 수 있다.
 
-    주의: 전체 종목 재스캔이라 수십 초~분이 걸릴 수 있다(버튼 트리거 전용).
+    재진입 방지: 이미 실행 중이면 바로 반환(사용자가 버튼을 여러 번 눌러도 1회만 수행).
+    반환: {created, skipped, busy}.
     """
+    global _backfill_running
     from datetime import timedelta
     from .screen import run_screen
     from .weekly import previous_week_friday
 
-    base_friday = previous_week_friday()
-    targets = [base_friday - timedelta(days=7 * i) for i in range(weeks)]  # 최근→과거
-    targets.sort()  # 과거→최근 순으로 저장
-    existing = {s.get("asof_date") for s in _load(base_dir)}
-    created, skipped = [], []
-    for asof in targets:
-        iso = asof.isoformat()
-        if iso in existing:
-            skipped.append(iso)
-            continue
-        df = run_screen(cfg, asof_date=asof)  # 과거 기준 정배열 재계산(캐시 사용)
-        record(base_dir, df, iso)
-        created.append(iso)
-    return {"created": created, "skipped": skipped}
+    with _backfill_lock:
+        if _backfill_running:
+            return {"created": [], "skipped": [], "busy": True}
+        _backfill_running = True
+    try:
+        base_friday = previous_week_friday()
+        targets = sorted(base_friday - timedelta(days=7 * i) for i in range(weeks))
+        existing = {s.get("asof_date") for s in _load(base_dir)}
+        created, skipped = [], []
+        for asof in targets:
+            iso = asof.isoformat()
+            if iso in existing:
+                skipped.append(iso)
+                continue
+            # 첫 호출이 캐시를 채우고, 이후 호출은 같은 날 캐시를 재사용(다운로드 0).
+            df = run_screen(cfg, asof_date=asof)
+            record(base_dir, df, iso)
+            created.append(iso)
+        return {"created": created, "skipped": skipped, "busy": False}
+    finally:
+        with _backfill_lock:
+            _backfill_running = False
 
 
 def changes(base_dir: str) -> dict:
