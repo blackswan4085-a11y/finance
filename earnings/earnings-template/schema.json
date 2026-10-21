@@ -1,0 +1,827 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "presentation": {
+      "type": "object",
+      "properties": {"profile": {"const": "compact-review-v1"}},
+      "required": ["profile"], "additionalProperties": false
+    },
+    "marketData": {
+      "type": "object",
+      "properties": {
+        "sourceId": {"type": "string", "minLength": 1},
+        "symbol": {"type": "string", "minLength": 1},
+        "currency": {"type": ["string", "null"]},
+        "price": {"type": ["number", "null"], "minimum": 0},
+        "previousClose": {"type": ["number", "null"], "minimum": 0},
+        "marketCap": {"type": ["number", "null"], "minimum": 0},
+        "asOf": {"type": ["string", "null"]},
+        "marketCapAsOf": {"type": ["string", "null"]},
+        "collectedAt": {"type": "string"},
+        "priceSource": {"type": ["string", "null"]},
+        "marketCapSource": {"type": ["string", "null"]},
+        "splitSinceReport": {"type": "boolean"},
+        "splitDates": {"type": "array", "items": {"type": "string"}},
+        "historySource": {"type": "string"},
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "history": {"type": "array", "maxItems": 500, "items": {
+          "type": "object", "properties": {"date": {"type": "string"}, "close": {"type": "number", "minimum": 0}},
+          "required": ["date", "close"], "additionalProperties": false
+        }}
+      },
+      "required": ["sourceId", "symbol", "currency", "price", "marketCap", "asOf", "collectedAt", "history", "splitSinceReport", "notes"],
+      "additionalProperties": false
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "company": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "ticker": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 14
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "EUR",
+            "KRW",
+            "JPY",
+            "GBP",
+            "CNY",
+            "TWD"
+          ]
+        },
+        "fiscalYearEndMonth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "isSample": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "ticker",
+        "currency",
+        "fiscalYearEndMonth",
+        "basis",
+        "isSample"
+      ],
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "quarters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2200
+          },
+          "quarter": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "revenue": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "operatingIncome": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "eps": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "year",
+          "quarter",
+          "revenue",
+          "operatingIncome",
+          "eps",
+          "sourceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100,
+      "minItems": 1
+    },
+    "annuals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2200
+          },
+          "revenue": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "operatingIncome": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "complete": {
+            "const": true
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "year",
+          "revenue",
+          "operatingIncome",
+          "complete",
+          "sourceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "consensus": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2200
+            },
+            "quarter": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "basis": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16
+            },
+            "asOf": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "revenue": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "operatingIncome": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "opm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "eps": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "required": [
+            "year",
+            "quarter",
+            "basis",
+            "asOf",
+            "revenue",
+            "operatingIncome",
+            "opm",
+            "eps",
+            "sourceId"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "callMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "enum": [
+              "money",
+              "eps",
+              "percent",
+              "count",
+              "money_trillion",
+              "count_billion",
+              "count_million"
+            ]
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 12
+                  },
+                  "kind": {
+                    "enum": [
+                      "growth",
+                      "difference"
+                    ]
+                  }
+                },
+                "required": [
+                  "value",
+                  "label",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxItems": 2,
+            "minItems": 1
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 26
+          },
+          "speaker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "qualifier": {
+            "enum": [
+              "greaterThan",
+              "atLeast",
+              "lessThan",
+              "atMost"
+            ]
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "value",
+          "unit",
+          "comparison",
+          "details",
+          "period",
+          "speaker",
+          "location",
+          "sourceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 6
+    },
+    "guidance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "unit": {
+            "enum": [
+              "money",
+              "eps",
+              "percent",
+              "count",
+              "money_trillion",
+              "count_billion",
+              "count_million"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            ]
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            ]
+          },
+          "consensus": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "consensusAsOf": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              }
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "consensusSourceId": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            ]
+          },
+          "currentText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35
+          },
+          "originalText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "bound": {
+            "enum": [
+              "atLeast",
+              "atMost",
+              "greaterThan",
+              "nearUpper"
+            ]
+          }
+        },
+        "required": [
+          "period",
+          "metric",
+          "unit",
+          "basis",
+          "previous",
+          "current",
+          "consensus",
+          "consensusAsOf",
+          "sourceId",
+          "consensusSourceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "conferenceCall": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "year",
+            "quarter",
+            "sourceId"
+          ],
+          "properties": {
+            "year": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2200
+            },
+            "quarter": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          }
+        }
+      ]
+    },
+    "reportPeriod": {
+      "type": "object",
+      "required": [
+        "start",
+        "end",
+        "sourceId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "end": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      }
+    },
+    "operatingDrivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit": {
+            "enum": [
+              "money",
+              "eps",
+              "percent",
+              "count",
+              "money_trillion",
+              "count_billion",
+              "count_million"
+            ]
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 12
+                  },
+                  "kind": {
+                    "enum": [
+                      "growth",
+                      "difference"
+                    ]
+                  }
+                },
+                "required": [
+                  "value",
+                  "label",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 56
+            },
+            "maxItems": 2,
+            "minItems": 1
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 26
+          },
+          "speaker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "qualifier": {
+            "enum": [
+              "greaterThan",
+              "atLeast",
+              "lessThan",
+              "atMost"
+            ]
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "value",
+          "unit",
+          "comparison",
+          "details",
+          "period",
+          "speaker",
+          "location",
+          "sourceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 3
+    },
+    "guidanceNotes": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 140
+      }
+    },
+    "marketEstimates": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 26
+          },
+          "guidanceMetric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "unit": {
+            "enum": [
+              "money",
+              "eps"
+            ]
+          },
+          "value": {
+            "type": "number"
+          },
+          "priorValue": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reportedGrowth": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "basisSourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "asOf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "period",
+          "guidanceMetric",
+          "unit",
+          "value",
+          "priorValue",
+          "reportedGrowth",
+          "basis",
+          "sourceId",
+          "asOf",
+          "location"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "company",
+    "sources",
+    "quarters",
+    "annuals",
+    "consensus",
+    "callMetrics",
+    "guidance",
+    "conferenceCall",
+    "reportPeriod"
+  ],
+  "additionalProperties": false
+}

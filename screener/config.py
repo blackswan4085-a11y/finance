@@ -38,6 +38,15 @@ class Config:
     usd_krw: float = 1400.0
     exclude_special: bool = True  # 우선주/유닛/권리 등 특수증권(보통주 아님) 제외
 
+    # 주간 시장 Recap 설정 (config.yaml의 recap: 섹션). dict 그대로 보관.
+    recap: dict = field(default_factory=dict)
+
+    # Bundled earnings workspace and background report generation settings.
+    earnings: dict = field(default_factory=dict)
+
+    # Customs statistics, local database and collection settings.
+    customs: dict = field(default_factory=dict)
+
     base_dir: str = "."
 
     @property

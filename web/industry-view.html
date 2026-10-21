@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>산업 분류 · KUIM</title><link rel="stylesheet" href="/ui.css"><script src="/ui.js"></script><script src="/industry-controls.js"></script><script src="/industry-view.js" defer></script></head>
+<body class="finance-settings finance-industries">
+<header class="finance-header"><div class="finance-brand"><span class="brand-mark" aria-hidden="true">▥</span><h1>산업 분류</h1></div><div class="header-actions"><nav class="finance-nav" aria-label="화면 이동"><a class="navbtn" href="/weekly">스크리너</a><a class="navbtn" href="/recap">시장 Recap</a><a class="navbtn" href="/industries" aria-current="page">산업 분류</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="테마 변경">☾</button></div></header>
+<main class="industry-workspace">
+  <section class="card industry-intro"><div class="stats" id="industryStats"></div><p id="sourceInfo" class="muted">KUIM 자료를 불러오는 중…</p><p class="muted">원본에 지정된 단계와 복수 사업을 표시합니다. 자동 분류 초안은 검토 상태를 유지하며, 소분류가 없는 기업은 미지정으로 표시합니다.</p></section>
+  <div class="industry-tabs" role="tablist" aria-label="산업 분류 보기"><button id="companiesTab" role="tab" aria-selected="true" aria-controls="companiesPanel" type="button">기업 분류</button><button id="taxonomyTab" role="tab" aria-selected="false" aria-controls="taxonomyPanel" tabindex="-1" type="button">분류 체계</button></div>
+  <section class="card industry-filter-card" aria-label="산업 필터">
+    <div class="industry-filter-grid">
+      <label>검색<input id="industrySearch" aria-label="기업·산업 검색" placeholder="종목 코드·기업명·산업 검색"></label>
+      <label id="countryLabel">상장국<select id="industryCountry"><option value="">한국·미국 전체</option><option value="KR">한국</option><option value="US">미국</option></select></label>
+      <label>대분류<select id="filterMajor"></select></label><label>중분류<select id="filterMiddle"></select></label><label>소분류<select id="filterMinor"></select></label>
+      <label id="statusLabel">분류 상태<select id="filterStatus"><option value="">전체 상태</option><option value="unclassified">미분류</option><option value="partial">대·중분류만 지정</option><option value="draft">자동 분류 초안</option><option value="review">사업 검토 필요</option><option value="approved">사업 검토 완료</option><option value="manual">직접 지정</option><option value="excluded">분류 제외</option></select></label>
+    </div>
+  </section>
+  <div id="industryMessage" class="update-status" role="status" aria-live="polite">불러오는 중…</div>
+  <section id="companiesPanel" class="card industry-table-card" role="tabpanel" aria-labelledby="companiesTab"><div class="table-wrap"><table class="industry-company-table"><thead><tr><th>기업</th><th>상장국·시장</th><th>대분류</th><th>중분류</th><th>소분류</th><th>검토 상태·근거</th><th>수정</th></tr></thead><tbody id="industryRows"></tbody></table></div><div class="pager"><span id="industryRange"></span><button id="industryPrevious" type="button">이전</button><button id="industryNext" type="button">다음</button></div></section>
+  <section id="taxonomyPanel" class="card industry-table-card" role="tabpanel" aria-labelledby="taxonomyTab" hidden><div class="table-wrap"><table class="industry-master-table"><thead><tr><th>대분류</th><th>중분류</th><th>소분류</th><th>산업 정의·포함·제외 기준</th></tr></thead><tbody id="taxonomyRows"></tbody></table></div></section>
+</main></body></html>

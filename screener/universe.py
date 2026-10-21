@@ -10,6 +10,7 @@ import requests
 import FinanceDataReader as fdr
 
 from .config import MARKET_META
+from .instruments import is_fund_record
 
 # FinanceDataReader StockListing에 넘길 실제 코드로 매핑
 _LISTING_CODE = {
@@ -193,6 +194,7 @@ def _normalize(df: pd.DataFrame, market: str, exclude_special: bool = True) -> p
     out["currency"] = meta["currency"]
     # 섹터는 사용자가 직접 입력/관리하므로 데이터 소스에서 가져오지 않음 (항상 공란)
     out["sector"] = ""
+    out["asset_type"] = ["ETF" if is_fund_record(row) else "STOCK" for row in df.to_dict("records")]
     # 시가총액: 한국 캐시 CSV의 Marcap(원 단위)이 있으면 보존, 없으면 NaN(미국은 나중에 채움)
     cap_col = cols.get("marcap") or cols.get("marketcap")
     if cap_col:
@@ -213,7 +215,11 @@ def _normalize(df: pd.DataFrame, market: str, exclude_special: bool = True) -> p
 def build_universe(markets: List[str], exclude_special: bool = True) -> pd.DataFrame:
     """선택된 시장들의 종목 리스트를 하나의 DataFrame으로 반환."""
     frames = []
+    failures = {}
     for m in markets:
+        if str(m).upper().startswith("ETF"):
+            print(f"[universe] {m}: ETF는 차트 검색 전용이므로 스크리닝에서 제외")
+            continue
         raw = None
         # 한국 시장은 캐시 CSV를 우선 사용 (KRX 실시간 API의 LOGOUT 거부 회피)
         if m in _KRX_MARKET_ID:
@@ -228,11 +234,16 @@ def build_universe(markets: List[str], exclude_special: bool = True) -> pd.DataF
                 raw = fdr.StockListing(code)
             except Exception as e:  # noqa: BLE001
                 print(f"[universe] {m} 리스팅 실패: {e}")
+                failures[m] = str(e)
                 continue
         if raw is None or len(raw) == 0:
             print(f"[universe] {m} 결과 없음")
+            failures[m] = "공급자가 빈 종목 목록을 반환했습니다."
             continue
         norm = _normalize(raw, m, exclude_special=exclude_special)
+        if norm.empty:
+            failures[m] = "조회한 목록에 스캔할 주식이 없습니다."
+            continue
         # 미국 시장은 Nasdaq 스크리너 API 시총으로 채움
         meta = MARKET_META.get(m, {})
         if meta.get("country") == "US":
@@ -250,8 +261,13 @@ def build_universe(markets: List[str], exclude_special: bool = True) -> pd.DataF
             filled = int(norm["marketcap"].notna().sum())
             print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
         frames.append(norm)
+    if failures:
+        markets_failed = ", ".join(failures)
+        blocked = any("10013" in detail for detail in failures.values())
+        detail = ("외부 데이터 접속이 차단됐습니다(Windows 10013). 일반 터미널에서 실행한 서버를 사용해 주세요."
+                  if blocked else "네트워크 또는 데이터 공급자 응답을 확인해 주세요.")
+        raise RuntimeError(f"종목 목록 수집 실패: {markets_failed}. {detail}")
     if not frames:
-        return pd.DataFrame(
-            columns=["symbol", "name", "market", "country", "currency", "sector", "marketcap"])
+        raise RuntimeError("스캔할 주식 시장이 없습니다. markets 설정을 확인해 주세요.")
     uni = pd.concat(frames, ignore_index=True)
     return uni

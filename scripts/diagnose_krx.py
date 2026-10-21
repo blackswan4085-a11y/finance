@@ -5,7 +5,7 @@ KOSPI/KOSDAQ 리스팅 실패("Expecting value: line 1 column 1") 원인을
 집 PC에서 그대로 재현해 무엇이 오는지 보여줍니다.
 
 사용법:
-    python diagnose_krx.py
+    python scripts/diagnose_krx.py
 결과를 그대로 복사해서 공유하면 원인을 특정할 수 있습니다.
 """
 from __future__ import annotations
