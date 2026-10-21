@@ -105,8 +105,11 @@ def to_weekly(df: pd.DataFrame) -> pd.DataFrame:
     return wk
 
 
-def download_all(symbols, cfg, label: str = "다운로드", asof_date=None) -> Dict[str, pd.DataFrame]:
-    """심볼 리스트의 일봉을 병렬 다운로드하여 {symbol: df} 반환."""
+def download_all(symbols, cfg, label: str = "다운로드", asof_date=None, progress=None) -> Dict[str, pd.DataFrame]:
+    """심볼 리스트의 일봉을 병렬 다운로드하여 {symbol: df} 반환.
+
+    progress: callable(done:int, total:int) — 진행 상황 콜백(웹 진행바용). 선택.
+    """
     exclusions = load_exclusions(cfg.base_dir)['instruments']
     symbols = [symbol for symbol in symbols if not exclusion_reason(cfg.base_dir,
         'KR' if re.fullmatch(r'[0-9]{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]', str(symbol).upper()) else 'US',
@@ -119,6 +122,10 @@ def download_all(symbols, cfg, label: str = "다운로드", asof_date=None) -> D
         return sym, df, status
 
     counts = {"cache": 0, "update": 0, "new": 0, "fail": 0}
+    total = len(symbols)
+    if progress:
+        progress(0, total)
+    done = 0
     with ThreadPoolExecutor(max_workers=cfg.max_workers) as ex:
         futs = [ex.submit(task, s) for s in symbols]
         for fut in tqdm(as_completed(futs), total=len(futs), desc=label, ncols=80):
@@ -126,6 +133,10 @@ def download_all(symbols, cfg, label: str = "다운로드", asof_date=None) -> D
             counts[status] = counts.get(status, 0) + 1
             if df is not None and not df.empty:
                 results[sym] = df
+            done += 1
+            # 매 종목마다 콜백은 과하니 25개마다 또는 마지막에 보고(웹 진행바 갱신).
+            if progress and (done % 25 == 0 or done == total):
+                progress(done, total)
     print(f"[data] 캐시재사용 {counts['cache']} · 갱신 {counts['update']} · "
           f"신규 {counts['new']} · 실패 {counts['fail']}")
     return results

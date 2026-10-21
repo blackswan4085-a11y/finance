@@ -41,7 +41,16 @@ def _save(base_dir: str, snapshots: list[dict]) -> None:
 
 
 def _aligned_rows(frame) -> list[dict]:
-    """DataFrame 에서 정배열 종목만 추출(symbol·name·market·country)."""
+    """정배열 종목 목록 추출(symbol·name·market·country).
+
+    run_screen 이 필터 전에 담아 둔 attrs['aligned_all'] 을 우선 사용한다(전체 정배열).
+    없으면(구버전/외부 호출) 필터 후 DataFrame 에서 aligned==True 로 폴백한다.
+    """
+    attr = getattr(frame, "attrs", {}).get("aligned_all") if frame is not None else None
+    if isinstance(attr, list):
+        return [{"symbol": str(x.get("symbol", "")), "name": str(x.get("name", "")),
+                 "market": str(x.get("market", "")), "country": str(x.get("country", ""))}
+                for x in attr]
     if frame is None or getattr(frame, "empty", True) or "aligned" not in frame:
         return []
     sub = frame[frame["aligned"] == True]  # noqa: E712 — pandas 불리언 마스킹
@@ -77,33 +86,73 @@ def has_comparison(base_dir: str) -> bool:
     return len(_load(base_dir)) >= 2
 
 
+_backfill_lock = threading.Lock()
+_backfill_running = False
+_backfill_state = {"running": False, "phase": "idle", "message": "",
+                   "done": 0, "total": 0, "week": 0, "weeks": 0, "error": None}
+
+
+def backfill_running() -> bool:
+    return _backfill_running
+
+
+def backfill_status() -> dict:
+    with _backfill_lock:
+        return dict(_backfill_state)
+
+
 def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
     """저장된 스냅샷이 부족할 때, 과거 주(금요일) 기준으로 정배열을 재계산해 채운다.
 
-    이미 2년치 주가 캐시가 있으므로 다운로드 없이 과거 기준 정배열을 다시 계산할 수 있다.
-    가장 최근 'weeks'개 주(금요일)에 대해, 해당 기준일 스냅샷이 없으면 run_screen 으로
-    재계산해 저장한다. 반환: {created: [asof...], skipped: [asof...]}.
+    첫 주차 계산에서 전 종목 주가를 받아 캐시에 저장하면, 나머지 주차는 같은 날
+    같은 캐시를 재사용하므로 다운로드는 1회로 끝난다(data._load_or_update 의
+    '오늘 받은 캐시 재사용'). 전 종목 스캔이라 캐시가 비어 있으면 최초 1회는
+    수십 분 걸릴 수 있다.
 
-    주의: 전체 종목 재스캔이라 수십 초~분이 걸릴 수 있다(버튼 트리거 전용).
+    재진입 방지: 이미 실행 중이면 바로 반환(사용자가 버튼을 여러 번 눌러도 1회만 수행).
+    반환: {created, skipped, busy}.
     """
+    global _backfill_running
     from datetime import timedelta
     from .screen import run_screen
     from .weekly import previous_week_friday
 
-    base_friday = previous_week_friday()
-    targets = [base_friday - timedelta(days=7 * i) for i in range(weeks)]  # 최근→과거
-    targets.sort()  # 과거→최근 순으로 저장
-    existing = {s.get("asof_date") for s in _load(base_dir)}
-    created, skipped = [], []
-    for asof in targets:
-        iso = asof.isoformat()
-        if iso in existing:
-            skipped.append(iso)
-            continue
-        df = run_screen(cfg, asof_date=asof)  # 과거 기준 정배열 재계산(캐시 사용)
-        record(base_dir, df, iso)
-        created.append(iso)
-    return {"created": created, "skipped": skipped}
+    with _backfill_lock:
+        if _backfill_running:
+            return {"created": [], "skipped": [], "busy": True}
+        _backfill_running = True
+        _backfill_state.update(running=True, phase="start", message="과거 정배열 재계산 준비 중…",
+                               done=0, total=0, week=0, weeks=weeks, error=None)
+    try:
+        base_friday = previous_week_friday()
+        targets = sorted(base_friday - timedelta(days=7 * i) for i in range(weeks))
+        existing = {s.get("asof_date") for s in _load(base_dir)}
+        created, skipped = [], []
+        for wi, asof in enumerate(targets, 1):
+            iso = asof.isoformat()
+            if iso in existing:
+                skipped.append(iso)
+                continue
+
+            def on_progress(done, total, _wi=wi, _iso=iso):
+                with _backfill_lock:
+                    _backfill_state.update(phase="scan", week=_wi, done=done, total=total,
+                                           message=f"[{_wi}/{len(targets)}주차] {_iso} 기준 주가 수집 {done}/{total}종목")
+            # 첫 호출이 캐시를 채우고, 이후 호출은 같은 날 캐시를 재사용(다운로드 0).
+            df = run_screen(cfg, asof_date=asof, progress=on_progress)
+            record(base_dir, df, iso)
+            created.append(iso)
+        with _backfill_lock:
+            _backfill_state.update(phase="done", message="완료", done=_backfill_state.get("total", 0))
+        return {"created": created, "skipped": skipped, "busy": False}
+    except Exception as exc:  # noqa: BLE001
+        with _backfill_lock:
+            _backfill_state.update(phase="error", error=str(exc), message=f"오류: {exc}")
+        raise
+    finally:
+        with _backfill_lock:
+            _backfill_running = False
+            _backfill_state["running"] = False
 
 
 def changes(base_dir: str) -> dict:
