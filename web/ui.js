@@ -47,7 +47,7 @@
     const watchlist = ['/watchlist', '/watchlist/'].includes(location.pathname);
     const earningsCal = ['/earnings-calendar', '/earnings-calendar/'].includes(location.pathname);
     const anyCustoms = customs || usCustoms || jpCustoms;
-    const weeklyPages = [['/weekly', '스크리너'], ['/weekly/recap', '시장 Recap'], ['/weekly/industries', '산업 분류'], ['/weekly/sector-etfs', 'ETF 설정']];
+    const weeklyPages = [['/weekly', '스크리너'], ['/weekly/changes', '정배열 변화'], ['/weekly/recap', '시장 Recap'], ['/weekly/industries', '산업 분류'], ['/weekly/sector-etfs', 'ETF 설정']];
     const aliases = {'/recap':'/weekly/recap', '/recap.html':'/weekly/recap', '/industries':'/weekly/industries', '/sector-etfs':'/weekly/sector-etfs', '/sector-classifications':'/weekly/sector-etfs', '/weekly/sector-classifications':'/weekly/sector-etfs', '/weekly/':'/weekly'};
     const active = aliases[location.pathname] || location.pathname;
     let nav = document.querySelector('.finance-nav');

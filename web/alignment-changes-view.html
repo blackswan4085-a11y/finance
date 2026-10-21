@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>정배열 변화 · Finance</title><link rel="stylesheet" href="/ui.css"><script src="/ui.js"></script><script src="/alignment-changes-view.js" defer></script></head>
+<body class="finance-settings finance-alignment-changes">
+<header class="finance-header"><div class="finance-brand"><span class="brand-mark" aria-hidden="true">▥</span><h1>정배열 변화</h1></div><div class="header-actions"><nav class="finance-nav" aria-label="화면 이동"></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="테마 변경">☾</button></div></header>
+<main class="alignment-changes-workspace">
+  <section class="card">
+    <p id="meta" class="muted">불러오는 중…</p>
+    <p class="muted">스크리너가 실행될 때마다 정배열(이동평균 정배열) 종목을 기준일별로 저장합니다. 가장 최근 두 기준일을 비교해 새로 정배열에 진입했거나 이탈한 종목을 보여줍니다. (신고가 아님)</p>
+    <div id="message" class="update-status" role="status" aria-live="polite" style="display:none"></div>
+  </section>
+  <div class="alignment-grid">
+    <section class="card">
+      <h2 class="section-label">🆕 신규 정배열 진입 <span id="addedCount"></span></h2>
+      <div class="table-wrap">
+        <table class="alignment-table"><thead><tr><th>종목</th><th>이름</th><th>시장</th></tr></thead><tbody id="addedRows"></tbody></table>
+      </div>
+      <p id="addedEmpty" class="muted" style="display:none">신규 진입 종목이 없습니다.</p>
+    </section>
+    <section class="card">
+      <h2 class="section-label">➖ 정배열 이탈 <span id="removedCount"></span></h2>
+      <div class="table-wrap">
+        <table class="alignment-table"><thead><tr><th>종목</th><th>이름</th><th>시장</th></tr></thead><tbody id="removedRows"></tbody></table>
+      </div>
+      <p id="removedEmpty" class="muted" style="display:none">이탈 종목이 없습니다.</p>
+    </section>
+  </div>
+</main></body></html>

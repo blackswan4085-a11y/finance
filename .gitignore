@@ -30,6 +30,7 @@ __pycache__/
 /sectors.json
 /watchlist.json
 /earnings_calendar_cache.json
+/alignment_snapshots.json
 /sector_etfs.json
 /industry_overrides.json
 /instrument_exclusions.json
