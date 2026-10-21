@@ -88,10 +88,17 @@ def has_comparison(base_dir: str) -> bool:
 
 _backfill_lock = threading.Lock()
 _backfill_running = False
+_backfill_state = {"running": False, "phase": "idle", "message": "",
+                   "done": 0, "total": 0, "week": 0, "weeks": 0, "error": None}
 
 
 def backfill_running() -> bool:
     return _backfill_running
+
+
+def backfill_status() -> dict:
+    with _backfill_lock:
+        return dict(_backfill_state)
 
 
 def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
@@ -114,24 +121,38 @@ def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
         if _backfill_running:
             return {"created": [], "skipped": [], "busy": True}
         _backfill_running = True
+        _backfill_state.update(running=True, phase="start", message="과거 정배열 재계산 준비 중…",
+                               done=0, total=0, week=0, weeks=weeks, error=None)
     try:
         base_friday = previous_week_friday()
         targets = sorted(base_friday - timedelta(days=7 * i) for i in range(weeks))
         existing = {s.get("asof_date") for s in _load(base_dir)}
         created, skipped = [], []
-        for asof in targets:
+        for wi, asof in enumerate(targets, 1):
             iso = asof.isoformat()
             if iso in existing:
                 skipped.append(iso)
                 continue
+
+            def on_progress(done, total, _wi=wi, _iso=iso):
+                with _backfill_lock:
+                    _backfill_state.update(phase="scan", week=_wi, done=done, total=total,
+                                           message=f"[{_wi}/{len(targets)}주차] {_iso} 기준 주가 수집 {done}/{total}종목")
             # 첫 호출이 캐시를 채우고, 이후 호출은 같은 날 캐시를 재사용(다운로드 0).
-            df = run_screen(cfg, asof_date=asof)
+            df = run_screen(cfg, asof_date=asof, progress=on_progress)
             record(base_dir, df, iso)
             created.append(iso)
+        with _backfill_lock:
+            _backfill_state.update(phase="done", message="완료", done=_backfill_state.get("total", 0))
         return {"created": created, "skipped": skipped, "busy": False}
+    except Exception as exc:  # noqa: BLE001
+        with _backfill_lock:
+            _backfill_state.update(phase="error", error=str(exc), message=f"오류: {exc}")
+        raise
     finally:
         with _backfill_lock:
             _backfill_running = False
+            _backfill_state["running"] = False
 
 
 def changes(base_dir: str) -> dict:

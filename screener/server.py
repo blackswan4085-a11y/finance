@@ -137,8 +137,11 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
 
     def refresh_screen_in_background(asof_date) -> None:
         nonlocal screen_df, screen_asof, screen_generated_at, screen_note
+        def on_progress(done, total):
+            with screen_state_lock:
+                screen_job["done"], screen_job["total"] = done, total
         try:
-            fresh_df = run_screen(cfg, asof_date=asof_date)
+            fresh_df = run_screen(cfg, asof_date=asof_date, progress=on_progress)
             cached = publish_screen_cache(screen_cache_path, fresh_df, asof_date)
             # 정배열 종목 스냅샷 저장(주간 신규/이탈 비교용). 실패해도 스크린 결과엔 영향 없음.
             try:
@@ -223,6 +226,12 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
             elif route == "/api/alignment-changes":
                 try:
                     self._send(200, json.dumps(alignment_changes.changes(base_dir), ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
+                    self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
+            elif route == "/api/alignment-changes/backfill/status":
+                # 백그라운드 backfill 진행률(프론트가 폴링). running/phase/done/total 등.
+                try:
+                    self._send(200, json.dumps(alignment_changes.backfill_status(), ensure_ascii=False), "application/json; charset=utf-8")
                 except Exception as exc:  # noqa: BLE001
                     self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
             elif route in ("/api/earnings", "/api/earnings/project"):
@@ -413,16 +422,16 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                         return
                     # 이미 진행 중이면 재실행 않고 안내(버튼 재클릭 방지).
                     if alignment_changes.backfill_running():
-                        self._send(409, json.dumps({"ok": False, "error": "이미 생성이 진행 중입니다. 완료될 때까지 기다려 주세요."}, ensure_ascii=False), "application/json; charset=utf-8")
+                        self._send(409, json.dumps({"ok": False, "error": "이미 생성이 진행 중입니다. 진행률을 확인해 주세요."}, ensure_ascii=False), "application/json; charset=utf-8")
                         return
-                    # 과거 2주 기준 정배열 재계산(전체 종목 스캔 — 캐시 없으면 최초 1회 수십 분).
-                    # 주가 다운로드는 첫 주차에서 1회만, 둘째 주차는 같은 날 캐시 재사용.
-                    outcome = alignment_changes.backfill(base_dir, cfg, weeks=2)
-                    if outcome.get("busy"):
-                        self._send(409, json.dumps({"ok": False, "error": "이미 생성이 진행 중입니다."}, ensure_ascii=False), "application/json; charset=utf-8")
-                        return
-                    result = alignment_changes.changes(base_dir)
-                    self._send(200, json.dumps({"ok": True, **result}, ensure_ascii=False), "application/json; charset=utf-8")
+                    # 백그라운드로 전종목 재계산(캐시 없으면 최초 수십 분). 진행률은 status 로 폴링.
+                    def _run_backfill():
+                        try:
+                            alignment_changes.backfill(base_dir, cfg, weeks=2)
+                        except Exception:  # noqa: BLE001
+                            pass
+                    threading.Thread(target=_run_backfill, daemon=True).start()
+                    self._send(202, json.dumps({"ok": True, "started": True}, ensure_ascii=False), "application/json; charset=utf-8")
                 except Exception as exc:  # noqa: BLE001
                     self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
                 return
@@ -518,6 +527,7 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                         asof_date = previous_week_friday()
                         screen_job.clear()
                         screen_job.update(state="running", asof_date=asof_date.isoformat(),
+                                          done=0, total=0,
                                           started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         status = dict(screen_job)
                         threading.Thread(target=refresh_screen_in_background,

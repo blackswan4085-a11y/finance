@@ -370,8 +370,12 @@ async function pollScreen() {{
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const job = await res.json();
     if (job.state === 'running') {{
-      screenUpdate('running', '스크리닝 중…', (job.asof_date || '') + ' 기준 · 종목을 수집하고 조건을 계산하는 중입니다.');
-      setTimeout(pollScreen, 3000);
+      const prog = (job.total && job.total > 0)
+        ? ' · ' + (job.done || 0).toLocaleString() + '/' + job.total.toLocaleString() + '종목 ('
+          + Math.floor((job.done || 0) / job.total * 100) + '%)'
+        : ' · 종목 목록을 준비하는 중…';
+      screenUpdate('running', '스크리닝 중…', (job.asof_date || '') + ' 기준' + prog);
+      setTimeout(pollScreen, 2000);
     }} else if (job.state === 'done' && btn.dataset.state === 'running') {{
       const evaluated = job.scan?.evaluated_count;
       if (job.count === 0 && !evaluated) {{

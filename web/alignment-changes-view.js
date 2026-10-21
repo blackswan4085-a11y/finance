@@ -58,6 +58,45 @@
     } catch (e) { showError(e.message); }
   }
 
+  // backfill 진행률 폴링: status 가 running 이면 2초마다 갱신, 끝나면 changes 재조회.
+  function pollBackfill() {
+    const message = document.getElementById('message');
+    const timer = setInterval(async () => {
+      let s;
+      try {
+        const r = await fetch('/api/alignment-changes/backfill/status', { cache: 'no-store' });
+        s = await r.json();
+        if (!r.ok) throw new Error(s.error || '진행 상태를 확인하지 못했습니다.');
+      } catch (e) {
+        clearInterval(timer);
+        document.getElementById('backfillBtn').disabled = false;
+        showError(e.message);
+        return;
+      }
+      if (s.phase === 'error') {
+        clearInterval(timer);
+        document.getElementById('backfillBtn').disabled = false;
+        showError(s.message || '생성 중 오류가 발생했습니다.');
+        return;
+      }
+      if (s.running) {
+        message.style.display = 'block';
+        message.classList.remove('error');
+        if (s.total > 0) {
+          const pct = Math.floor((s.done / s.total) * 100);
+          message.textContent = `${s.message || '재계산 중…'} (${pct}%)`;
+        } else {
+          message.textContent = s.message || '재계산 준비 중…';
+        }
+        return;
+      }
+      // running=false → 완료(또는 시작 전). 완료면 결과 재조회.
+      clearInterval(timer);
+      document.getElementById('backfillBtn').disabled = false;
+      await load();
+    }, 2000);
+  }
+
   async function backfill() {
     const btn = document.getElementById('backfillBtn');
     const message = document.getElementById('message');
@@ -70,10 +109,13 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
       });
       const d = await r.json();
+      // 202(시작됨) 또는 409(이미 진행 중) 모두 폴링으로 진행률을 따라간다.
+      if (r.status === 202 || r.status === 409) { pollBackfill(); return; }
       if (!r.ok || d.ok === false) throw new Error(d.error || '생성에 실패했습니다.');
+      // 구버전 동기 응답 호환.
       render(d);
-    } catch (e) { showError(e.message); }
-    finally { btn.disabled = false; }
+      btn.disabled = false;
+    } catch (e) { showError(e.message); btn.disabled = false; }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
