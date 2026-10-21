@@ -23,6 +23,7 @@ from .config import Config
 from .report import build_records, render_html
 from .sectors import load_sectors, set_sector
 from . import watchlist
+from . import earnings_calendar
 from .sector_classification import classification_rows
 from .sector_etfs import load_sector_etfs, sector_etf_settings, save_sector_etfs, chart_defaults
 from .recap import RecapConfig, DEFAULT_INDICES, load_recap, refresh_recap
@@ -251,6 +252,16 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                     self._send(200, json.dumps(watchlist.load(base_dir), ensure_ascii=False), "application/json; charset=utf-8")
                 except Exception as exc:  # noqa: BLE001
                     self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
+            elif route in ("/earnings-calendar", "/earnings-calendar-view.js"):
+                filename = "earnings-calendar-view.html" if route == "/earnings-calendar" else route.lstrip("/")
+                ctype = "text/html; charset=utf-8" if route == "/earnings-calendar" else "text/javascript; charset=utf-8"
+                with open(os.path.join(web_dir, filename), "rb") as stream:
+                    self._send(200, stream.read(), ctype)
+            elif route == "/api/earnings-calendar":
+                try:
+                    self._send(200, json.dumps(earnings_calendar.load(base_dir), ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
+                    self._send(500, json.dumps({"error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
             elif route == "/chart":
                 with open(chart_page_path, "rb") as f:
                     self._send(200, f.read())
@@ -375,6 +386,22 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                     else:
                         items = watchlist.remove(base_dir, str(payload.get("symbol", "")), str(payload.get("country", "")))
                     self._send(200, json.dumps({"ok": True, "items": items}, ensure_ascii=False), "application/json; charset=utf-8")
+                except (OSError, ValueError, TypeError) as exc:
+                    self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
+                return
+            if parsed.path == "/api/earnings-calendar/refresh":
+                try:
+                    origin = self.headers.get("Origin")
+                    if origin and origin != "http://" + self.headers.get("Host", ""):
+                        self._send(403, '{"error":"허용되지 않은 요청입니다."}', "application/json; charset=utf-8")
+                        return
+                    length = int(self.headers.get("Content-Length", 0))
+                    payload = json.loads(self.rfile.read(length)) if length else {}
+                    if not isinstance(payload, dict):
+                        raise ValueError("JSON 객체로 요청해 주세요.")
+                    data = earnings_calendar.refresh(base_dir, str(payload.get("from", "")),
+                                                     int(payload.get("days", 7)))
+                    self._send(200, json.dumps({"ok": True, **data}, ensure_ascii=False), "application/json; charset=utf-8")
                 except (OSError, ValueError, TypeError) as exc:
                     self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
                 return
