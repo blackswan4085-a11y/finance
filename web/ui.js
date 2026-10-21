@@ -63,7 +63,7 @@
       }
     }
     nav.replaceChildren();
-    for (const [href, label, selected] of [['/', '실적 리포트', earnings], ['/weekly', '위클리', !earnings && !anyCustoms && !watchlist && !earningsCal], ['/watchlist', '관심종목', watchlist], ['/earnings-calendar', '실적 캘린더', earningsCal], ['/customs', '수출입(한국)', customs], ['/us-customs', '수출입(미국)', usCustoms], ['/jp-customs', '수출입(일본)', jpCustoms]]) {
+    for (const [href, label, selected] of [['/', '실적 리포트', earnings], ['/weekly', '위클리', !earnings && !anyCustoms && !watchlist && !earningsCal], ['/watchlist', '관심종목', watchlist], ['/earnings-calendar', '실적 캘린더', earningsCal], ['/customs', '수출입(South Korea)', customs], ['/us-customs', '수출입(United States)', usCustoms], ['/jp-customs', '수출입(Japan)', jpCustoms]]) {
       const link = document.createElement('a'); link.href = href; link.className = 'navbtn'; link.textContent = label;
       if (selected) link.setAttribute('aria-current', 'page'); nav.append(link);
     }

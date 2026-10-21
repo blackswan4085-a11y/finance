@@ -17,6 +17,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from ..customs.names import code_name
+
 
 def connect(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
@@ -149,8 +151,7 @@ def level_summary(
     sql = f"""
         SELECT hs_code AS code,
                SUM(CASE WHEN flow='exp' THEN value ELSE 0 END) AS exp_dlr,
-               SUM(CASE WHEN flow='imp' THEN value ELSE 0 END) AS imp_dlr,
-               MAX(descr) AS descr
+               SUM(CASE WHEN flow='imp' THEN value ELSE 0 END) AS imp_dlr
         FROM trade_raw
         WHERE period = ? AND hs_level = ? AND hs_code LIKE ? {cty_sql}
         GROUP BY code
@@ -162,38 +163,15 @@ def level_summary(
     for r in rows:
         exp, imp = r["exp_dlr"] or 0, r["imp_dlr"] or 0
         out.append({
-            "code": r["code"], "name": r["descr"] or "",
+            "code": r["code"], "name": code_name(r["code"]),
             "exp_dlr": exp, "imp_dlr": imp, "bal": exp - imp,
         })
     return out
 
 
 def name_for(conn: sqlite3.Connection, prefix: str) -> str:
-    """단일 코드의 대표 품목명(SDESC)."""
-    row = conn.execute(
-        """
-        SELECT descr FROM trade_raw
-        WHERE hs_code = ? AND descr <> ''
-        GROUP BY descr
-        ORDER BY SUM(value) DESC
-        LIMIT 1
-        """,
-        (prefix,),
-    ).fetchone()
-    if row and row["descr"]:
-        return row["descr"]
-    # prefix 하위 중 대표
-    row = conn.execute(
-        """
-        SELECT descr FROM trade_raw
-        WHERE hs_code LIKE ? AND descr <> ''
-        GROUP BY descr
-        ORDER BY SUM(value) DESC
-        LIMIT 1
-        """,
-        (prefix + "%",),
-    ).fetchone()
-    return row["descr"] if row else ""
+    """Shared Korean description, independent of Census's stored labels."""
+    return code_name(prefix)
 
 
 def monthly_series(
@@ -261,18 +239,13 @@ def all_series_by_hs2(conn: sqlite3.Connection, country: str | None = None) -> d
 
 
 def hs2_names(conn: sqlite3.Connection) -> dict[str, str]:
-    """HS2 코드 → 대표 설명."""
+    """HS2 codes mapped to the shared Korean catalogue."""
     rows = conn.execute(
         """
-        SELECT hs_code, descr FROM (
-            SELECT hs_code, descr, SUM(value) AS v
-            FROM trade_raw WHERE hs_level = 2 AND descr <> ''
-            GROUP BY hs_code, descr
-            ORDER BY v DESC
-        ) GROUP BY hs_code
+        SELECT DISTINCT hs_code FROM trade_raw WHERE hs_level = 2
         """
     ).fetchall()
-    return {r["hs_code"]: r["descr"] for r in rows}
+    return {r["hs_code"]: code_name(r["hs_code"]) for r in rows}
 
 
 def overview(conn: sqlite3.Connection, country: str | None = None) -> dict:

@@ -13,6 +13,7 @@ import json
 from html import escape
 
 from ..ui import shared_ui
+from ..trade_display import MONEY_JS
 
 PAGE_CSS = """
 :root{
@@ -171,7 +172,7 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <html lang="ko"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>미국 수출입 통계 · Finance</title>
+<title>United States 수출입 통계 · Finance</title>
 <style>{PAGE_CSS}</style>
 {theme}
 <style>{FINANCE_CSS}</style>
@@ -183,14 +184,14 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <div class="wrap">
   <header class="top">
     <div class="title-wrap">
-      <h1>미국 수출입 통계</h1>
+      <h1>United States 수출입 통계</h1>
       <span class="meta" id="meta-line">U.S. Census · 기준월 <b>{escape(latest_disp)}</b> · 수집범위 {escape(meta.get('range','-'))} · 수집시각 {escape(meta.get('collected_at','-'))}</span>
     </div>
     <div class="top-actions">
       <button id="update-btn" class="update-button" title="Census API에서 최신 데이터를 가져옵니다">데이터 업데이트</button>
     </div>
   </header>
-  <p class="hint">금액: USD · 전 세계 합계 · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비</p>
+  <p class="hint">금액: USD · M = 1,000,000 · B = 1,000,000,000 · World · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비</p>
   <div id="update-status" class="update-status" style="display:none"></div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div id="app" class="grid"></div>
@@ -202,24 +203,14 @@ const LATEST = {json.dumps(latest)};
 </body></html>"""
 
 
-PAGE_JS = r"""
+PAGE_JS = MONEY_JS + r"""
 // ---------- 유틸 ----------
 function fmtUSD(v){
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const a=Math.abs(v);
-  if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
-  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
-  if(a>=1e3) return '$'+(v/1e3).toFixed(1)+'K';
-  return '$'+Math.round(v).toLocaleString();
+  return formatTradeMoney(v, '$');
 }
 function fmtPct(v){ return (v===null||v===undefined||isNaN(v))?'-':(v>=0?'+':'')+v.toFixed(1)+'%'; }
 function fmtUnit(v){
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const a=Math.abs(v);
-  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
-  if(a>=1e3) return '$'+(v/1e3).toFixed(2)+'K';
-  if(a>=1) return '$'+v.toFixed(2);
-  return '$'+v.toFixed(4);
+  return formatTradeUnitPrice(v, '$');
 }
 function cls(v){ return v>=0?'pos':'neg'; }
 const UP='#ff5c6c', DOWN='#4a90ff';
@@ -530,7 +521,7 @@ function topBarChart(rows){
 }
 
 // ---------- 렌더 ----------
-function ctyName(){ return '전체 국가'; }  // 기본 전체 합산 모드
+function ctyName(){ return 'World'; }  // 기본 전체 합산 모드
 
 function renderBreadcrumb(names){
   const bc=document.getElementById('breadcrumb'); bc.innerHTML='';
@@ -657,8 +648,8 @@ function renderDetail(detail){
   // 국가별 순위 (미국판 고유) — 전체 국가 모드에서만 의미 있음
   if(!state.cty){
     const crow=el('div',{class:'chart-row'});
-    crow.appendChild(countryPanel('이 품목을 미국에 가장 많이 수출하는 국가 (수입 기준, 최근월)', detail.impCountries, C_IMP));
-    crow.appendChild(countryPanel('미국이 이 품목을 가장 많이 수출하는 상대국 (수출 기준, 최근월)', detail.expCountries, C_EXP));
+    crow.appendChild(countryPanel('United States의 주요 수입 상대국 (최근월)', detail.impCountries, C_IMP));
+    crow.appendChild(countryPanel('United States의 주요 수출 상대국 (최근월)', detail.expCountries, C_EXP));
     app.appendChild(crow);
   }
 
@@ -751,8 +742,8 @@ function renderOverview(ov){
       `<div class="hc-chips">${chips}</div>`});
   }
   // 전체 국가 모드: 미국 입장에서 "수출/수입". 국가 선택 시: 그 국가와의 미국 수출/수입.
-  const expLabel = state.cty ? '미국→'+ctyName()+' 수출' : '미국 총수출 (최근월)';
-  const impLabel = state.cty ? ctyName()+'→미국 수입' : '미국 총수입 (최근월)';
+  const expLabel = state.cty ? 'United States→'+ctyName()+' 수출' : 'United States 총수출 (최근월)';
+  const impLabel = state.cty ? ctyName()+'→United States 수입' : 'United States 총수입 (최근월)';
   hg.appendChild(card(expLabel, C_EXP, fmtUSD(t.exp_dlr), pctChip('YoY',t.exp_yoy)+pctChip('QoQ',t.exp_qoq)));
   hg.appendChild(card(impLabel, C_IMP, fmtUSD(t.imp_dlr), pctChip('YoY',t.imp_yoy)+pctChip('QoQ',t.imp_qoq)));
   const balCls = (t.bal||0)>=0?'up':'down';

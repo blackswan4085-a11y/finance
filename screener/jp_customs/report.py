@@ -4,7 +4,7 @@
 표와 SVG 차트를 그린다.
 
 특징:
-  - 금액 단위 '천엔' → 兆/億/万엔 으로 표기(fmtYen 함수가 ¥ 포맷 담당)
+  - 금액·단가의 저장값(천 엔)을 JPY로 환산해 공통 K/M/B 단위로 표기
   - 기본 데이터는 統計品別表(전 세계 합계). HS2→4→6 드릴다운은 사전 수집돼 즉시.
   - HS6 상세에서만 国別(品別国別表) 수입/수출 상대국 순위를 온디맨드로 표시.
 """
@@ -14,6 +14,7 @@ import json
 from html import escape
 
 from ..ui import shared_ui
+from ..trade_display import MONEY_JS
 
 PAGE_CSS = """
 :root{
@@ -172,7 +173,7 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <html lang="ko"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>일본 수출입 통계 · Finance</title>
+<title>Japan 수출입 통계 · Finance</title>
 <style>{PAGE_CSS}</style>
 {theme}
 <style>{FINANCE_CSS}</style>
@@ -184,14 +185,14 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <div class="wrap">
   <header class="top">
     <div class="title-wrap">
-      <h1>일본 수출입 통계</h1>
-      <span class="meta" id="meta-line">재무성 e-Stat · 기준월 <b>{escape(latest_disp)}</b> · 수집범위 {escape(meta.get('range','-'))} · 금액단위 천엔 · 수집시각 {escape(meta.get('collected_at','-'))}</span>
+      <h1>Japan 수출입 통계</h1>
+      <span class="meta" id="meta-line">재무성 e-Stat · 기준월 <b>{escape(latest_disp)}</b> · 수집범위 {escape(meta.get('range','-'))} · 금액: JPY · 수집시각 {escape(meta.get('collected_at','-'))}</span>
     </div>
     <div class="top-actions">
       <button id="update-btn" class="update-button" title="e-Stat에서 최신 데이터를 가져옵니다">데이터 업데이트</button>
     </div>
   </header>
-  <p class="hint">금액: 천엔(→ 兆/億 표기) · 전 세계 합계 · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비</p>
+  <p class="hint">금액: JPY · M = 1,000,000 · B = 1,000,000,000 · World · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비</p>
   <div id="update-status" class="update-status" style="display:none"></div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div id="app" class="grid"></div>
@@ -203,26 +204,16 @@ const LATEST = {json.dumps(latest)};
 </body></html>"""
 
 
-PAGE_JS = r"""
+PAGE_JS = MONEY_JS + r"""
 // ---------- 유틸 ----------
-// DB 금액 단위는 '천엔'. 조엔=값/1e9, 억엔=값/1e5, 만엔=값/10.
-function fmtYen(v){  // DB 천엔 → 兆/億/万엔 표기
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const neg=v<0?'-':''; const a=Math.abs(v);
-  if(a>=1e9) return neg+'¥'+(a/1e9).toFixed(2)+'兆';
-  if(a>=1e5) return neg+'¥'+(a/1e5).toFixed(2)+'億';
-  if(a>=10)  return neg+'¥'+(a/10).toFixed(1)+'万';
-  return neg+'¥'+Math.round(a*1000).toLocaleString();  // 천엔→엔
+// Stored values are JPY thousands; convert to JPY before formatting.
+function fmtYen(v){
+  return formatTradeMoney(v===null||v===undefined ? v : v*1000, '¥');
 }
 function fmtPct(v){ return (v===null||v===undefined||isNaN(v))?'-':(v>=0?'+':'')+v.toFixed(1)+'%'; }
-// 단가 포맷(천엔 단위): 값=천엔. 천엔 이상이면 万/億엔, 아니면 엔으로 표기.
+// Unit prices use the same JPY conversion, preserving decimal precision.
 function fmtUnit(v){
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const a=Math.abs(v);
-  if(a>=1e5) return '¥'+(v/1e5).toFixed(2)+'億';
-  if(a>=10)  return '¥'+(v/10).toFixed(2)+'万';
-  if(a>=0.1) return '¥'+Math.round(v*1000).toLocaleString();  // 천엔→엔
-  return '¥'+(v*1000).toFixed(1);
+  return formatTradeUnitPrice(v===null||v===undefined ? v : v*1000, '¥');
 }
 function cls(v){ return v>=0?'pos':'neg'; }
 const UP='#ff5c6c', DOWN='#4a90ff';
@@ -533,7 +524,7 @@ function topBarChart(rows){
 }
 
 // ---------- 렌더 ----------
-function ctyName(){ return '전체 국가'; }  // 기본 전체 합산 모드
+function ctyName(){ return 'World'; }  // 기본 전체 합산 모드
 
 function renderBreadcrumb(names){
   const bc=document.getElementById('breadcrumb'); bc.innerHTML='';
@@ -660,8 +651,8 @@ function renderDetail(detail){
   // 국가별 순위 — HS6(6자리) 상세에서만. 품별국별표(e-Stat) 온디맨드 수집.
   if(level===6 && ((detail.impCountries&&detail.impCountries.length)||(detail.expCountries&&detail.expCountries.length))){
     const crow=el('div',{class:'chart-row'});
-    crow.appendChild(countryPanel('일본이 이 품목을 가장 많이 수입하는 상대국 (최근 연도)', detail.impCountries, C_IMP));
-    crow.appendChild(countryPanel('일본이 이 품목을 가장 많이 수출하는 상대국 (최근 연도)', detail.expCountries, C_EXP));
+    crow.appendChild(countryPanel('Japan의 주요 수입 상대국 (최근 연도)', detail.impCountries, C_IMP));
+    crow.appendChild(countryPanel('Japan의 주요 수출 상대국 (최근 연도)', detail.expCountries, C_EXP));
     app.appendChild(crow);
   } else if(level===6){
     app.appendChild(el('div',{class:'panel'},[el('div',{class:'empty'},['국가별 순위 데이터를 불러오지 못했습니다.'])]));
@@ -677,7 +668,7 @@ function renderUnitPrice(detail){
   const up=detail.unitPrice;
   if(!up) return;
   const panel=el('div',{class:'panel'});
-  panel.appendChild(el('h2',{},['단가 추이 ('+(up.valueUnit||'千엔')+'/'+(up.qtyUnit||'')+')']));
+  panel.appendChild(el('h2',{},['단가 추이 (JPY/'+(up.qtyUnit||'')+')']));
   const pts=(up.series||[]).filter(p=>p.exp_unit!=null||p.imp_unit!=null);
   if(up.note && !pts.length){ panel.appendChild(el('div',{class:'empty'},[up.note])); app.appendChild(panel); return; }
   if(!pts.length){ panel.appendChild(el('div',{class:'empty'},['이 품목은 수량 자료가 없어 단가를 표시할 수 없습니다.'])); app.appendChild(panel); return; }
@@ -747,7 +738,7 @@ function renderOverview(ov){
   const t=ov.totals||{};
   const hero=el('div',{class:'hero'});
   const pd=ov.period||LATEST;
-  hero.appendChild(el('div',{class:'htitle',html:`기준월 <b>${(pd||'').replace('-','.')}</b> · 전 세계 합계 · 전체 품목(HS 2자리 ${t.hs2_count||0}개) 종합 · 금액단위 천엔`}));
+  hero.appendChild(el('div',{class:'htitle',html:`기준월 <b>${(pd||'').replace('-','.')}</b> · World · 전체 품목(HS 2자리 ${t.hs2_count||0}개) 종합 · JPY`}));
   const hg=el('div',{class:'hero-grid'});
   function card(label, color, val, chips){
     return el('div',{class:'hero-card',html:
@@ -756,8 +747,8 @@ function renderOverview(ov){
       `<div class="hc-chips">${chips}</div>`});
   }
   // 일본 전 세계 수출/수입 합계
-  const expLabel = '일본 총수출 (최근월)';
-  const impLabel = '일본 총수입 (최근월)';
+  const expLabel = 'Japan 총수출 (최근월)';
+  const impLabel = 'Japan 총수입 (최근월)';
   hg.appendChild(card(expLabel, C_EXP, fmtYen(t.exp_dlr), pctChip('YoY',t.exp_yoy)+pctChip('QoQ',t.exp_qoq)));
   hg.appendChild(card(impLabel, C_IMP, fmtYen(t.imp_dlr), pctChip('YoY',t.imp_yoy)+pctChip('QoQ',t.imp_qoq)));
   const balCls = (t.bal||0)>=0?'up':'down';

@@ -150,7 +150,7 @@ def all_series_by_hs2(conn: sqlite3.Connection) -> dict[str, list[dict]]:
 
 
 def name_for(conn: sqlite3.Connection, prefix: str) -> str:
-    """HS 품목명. e-Stat 품별표에는 라벨이 없어 내장 HS 사전에서 조회."""
+    """HS 품목명은 한·미·일 공통 한국어 명칭표에서 조회."""
     from .hsnames import hs_name
     return hs_name(prefix)
 
@@ -210,7 +210,7 @@ def country_breakdown(conn: sqlite3.Connection, hs6: str, flow: str = "imp", top
         """,
         (hs6, flow, top),
     ).fetchall()
-    return [{"code": r["cty_code"], "name": r["cty_name"] or area_name(r["cty_code"]), "value": r["v"] or 0} for r in rows]
+    return [{"code": r["cty_code"], "name": area_name(r["cty_code"], r["cty_name"]), "value": r["v"] or 0} for r in rows]
 
 
 def has_country(conn: sqlite3.Connection, hs6: str) -> bool:

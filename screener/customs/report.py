@@ -9,6 +9,7 @@ import json
 from html import escape
 
 from ..ui import shared_ui
+from ..trade_display import MONEY_JS
 
 PAGE_CSS = """
 :root{
@@ -168,7 +169,7 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <html lang="ko"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>수출입 통계 · Finance</title>
+<title>South Korea 수출입 통계 · Finance</title>
 <style>{PAGE_CSS}</style>
 {theme}
 <style>{FINANCE_CSS}</style>
@@ -180,14 +181,14 @@ def page_html(meta: dict, embedded: dict | None = None) -> str:
 <div class="wrap">
   <header class="top">
     <div class="title-wrap">
-      <h1>수출입 통계</h1>
+      <h1>South Korea 수출입 통계</h1>
       <span class="meta" id="meta-line">관세청 · 기준월 <b>{escape(latest_disp)}</b> · 수집범위 {escape(meta.get('range','-'))} · 수집시각 {escape(meta.get('collected_at','-'))}</span>
     </div>
     <div class="top-actions">
       <button id="update-btn" class="update-button" title="관세청 API에서 최신 데이터를 가져옵니다">데이터 업데이트</button>
     </div>
   </header>
-  <p class="hint">금액: USD · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비 (진행 중인 분기 포함)</p>
+  <p class="hint">금액: USD · M = 1,000,000 · B = 1,000,000,000 · YoY: 전년동월 대비 · QoQ: 분기 누적액의 전분기 대비 (진행 중인 분기 포함)</p>
   <div id="update-status" class="update-status" style="display:none"></div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div id="app" class="grid"></div>
@@ -201,25 +202,15 @@ const LATEST = {json.dumps(latest).replace('<', chr(92) + 'u003c')};
 </body></html>"""
 
 
-PAGE_JS = r"""
+PAGE_JS = MONEY_JS + r"""
 // ---------- 유틸 ----------
 function fmtUSD(v){
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const a=Math.abs(v);
-  if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B';
-  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
-  if(a>=1e3) return '$'+(v/1e3).toFixed(1)+'K';
-  return '$'+Math.round(v).toLocaleString();
+  return formatTradeMoney(v, '$');
 }
 function fmtPct(v){ return (v===null||v===undefined||isNaN(v))?'-':(v>=0?'+':'')+v.toFixed(1)+'%'; }
 // 단가 포맷: 통화기호 + 자릿수 적응(소수). 큰 값은 K/M 로 축약.
 function fmtUnit(v){
-  if(v===null||v===undefined||isNaN(v)) return '-';
-  const a=Math.abs(v);
-  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
-  if(a>=1e3) return '$'+(v/1e3).toFixed(2)+'K';
-  if(a>=1) return '$'+v.toFixed(2);
-  return '$'+v.toFixed(4);
+  return formatTradeUnitPrice(v, '$');
 }
 function cls(v){ return v>=0?'pos':'neg'; }
 function esc(value){ return String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

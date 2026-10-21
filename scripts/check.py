@@ -24,7 +24,7 @@ def main():
     js_files += sorted((ROOT / "earnings/earnings-template").glob("*.mjs"))
     commands = [[node, "--check", str(path)] for path in js_files]
     commands += [[sys.executable, str(ROOT / "tests" / name)] for name in
-                 ("check_screen.py", "check_industry.py", "check_customs.py", "check_earnings.py")]
+                 ("check_screen.py", "check_industry.py", "check_customs.py", "check_trade_display.py", "check_earnings.py")]
     commands.append([node, str(ROOT / "tests/check-earnings-table.cjs")])
     for command in commands:
         result = subprocess.run(command, cwd=ROOT, env=env)
