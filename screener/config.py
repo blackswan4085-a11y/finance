@@ -41,6 +41,12 @@ class Config:
     # 주간 시장 Recap 설정 (config.yaml의 recap: 섹션). dict 그대로 보관.
     recap: dict = field(default_factory=dict)
 
+    # Bundled earnings workspace and background report generation settings.
+    earnings: dict = field(default_factory=dict)
+
+    # Customs statistics, local database and collection settings.
+    customs: dict = field(default_factory=dict)
+
     base_dir: str = "."
 
     @property

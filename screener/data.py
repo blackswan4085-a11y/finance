@@ -10,6 +10,8 @@ from typing import Dict, Optional
 import pandas as pd
 import FinanceDataReader as fdr
 from tqdm import tqdm
+from .security_policy import exclusion_reason, load_exclusions
+import re
 
 
 def _cache_file(cache_dir: str, symbol: str) -> str:
@@ -103,9 +105,13 @@ def to_weekly(df: pd.DataFrame) -> pd.DataFrame:
     return wk
 
 
-def download_all(symbols, cfg, label: str = "다운로드") -> Dict[str, pd.DataFrame]:
+def download_all(symbols, cfg, label: str = "다운로드", asof_date=None) -> Dict[str, pd.DataFrame]:
     """심볼 리스트의 일봉을 병렬 다운로드하여 {symbol: df} 반환."""
-    start = (datetime.now() - timedelta(days=cfg.lookback_days)).strftime("%Y-%m-%d")
+    exclusions = load_exclusions(cfg.base_dir)['instruments']
+    symbols = [symbol for symbol in symbols if not exclusion_reason(cfg.base_dir,
+        'KR' if re.fullmatch(r'[0-9]{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]', str(symbol).upper()) else 'US',
+        symbol, records=exclusions)]
+    start = ((asof_date or datetime.now().date()) - timedelta(days=cfg.lookback_days)).strftime("%Y-%m-%d")
     results: Dict[str, pd.DataFrame] = {}
 
     def task(sym):

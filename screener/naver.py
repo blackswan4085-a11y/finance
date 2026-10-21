@@ -49,7 +49,11 @@ def _fetch_history(category: str, code: str, pages: int = 3,
                             "page": page, "pageSize": size},
                     headers=_HEADERS, timeout=12,
                 )
-                data = r.json().get("result", [])
+                r.raise_for_status()
+                payload = r.json()
+                data = payload.get("result") if isinstance(payload, dict) else []
+                if not isinstance(data, list):
+                    data = []
                 break
             except Exception:  # noqa: BLE001
                 data = []
@@ -139,11 +143,13 @@ def _compute_row(meta: Dict, series: List[Dict], mode: str) -> Dict:
     }
 
 
-def collect_rates(items: List[Dict]) -> List[Dict]:
+def collect_rates(items: List[Dict], asof_date=None) -> List[Dict]:
     """국채 금리. items=[{group,name,code}]. 등락 bp."""
     out = []
     for meta in items:
         series = _fetch_history("bond", meta["code"])
+        if asof_date is not None:
+            series = [row for row in series if row["date"].date() <= asof_date]
         if not series:
             out.append(_error_row(meta))
             continue
@@ -151,11 +157,13 @@ def collect_rates(items: List[Dict]) -> List[Dict]:
     return out
 
 
-def collect_fx(items: List[Dict]) -> List[Dict]:
+def collect_fx(items: List[Dict], asof_date=None) -> List[Dict]:
     """환율. items=[{group,name,code}]. 등락 %."""
     out = []
     for meta in items:
         series = _fetch_history("exchange", meta["code"])
+        if asof_date is not None:
+            series = [row for row in series if row["date"].date() <= asof_date]
         if not series:
             out.append(_error_row(meta))
             continue

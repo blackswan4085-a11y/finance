@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "company": {
+    "name": "테스트기업",
+    "ticker": "TEST",
+    "currency": "USD",
+    "fiscalYearEndMonth": 12,
+    "basis": "GAAP",
+    "isSample": true
+  },
+  "sources": [{"id": "fixture", "label": "테스트 전용 가상 수치"}],
+  "quarters": [
+    {"year": 2025, "quarter": 3, "revenue": 100, "operatingIncome": 20, "eps": 1, "sourceId": "fixture"},
+    {"year": 2025, "quarter": 4, "revenue": 110, "operatingIncome": 22, "eps": 1.1, "sourceId": "fixture"},
+    {"year": 2026, "quarter": 1, "revenue": 120, "operatingIncome": 24, "eps": 1.2, "sourceId": "fixture"},
+    {"year": 2026, "quarter": 2, "revenue": 130, "operatingIncome": 26, "eps": 1.3, "sourceId": "fixture"},
+    {"year": 2026, "quarter": 3, "revenue": 140, "operatingIncome": 28, "eps": 1.4, "sourceId": "fixture"}
+  ],
+  "annuals": [
+    {"year": 2024, "revenue": 340, "operatingIncome": 68, "complete": true, "sourceId": "fixture"},
+    {"year": 2025, "revenue": 400, "operatingIncome": 80, "complete": true, "sourceId": "fixture"}
+  ],
+  "reportPeriod": {"start": "2026-07-01", "end": "2026-09-30", "sourceId": "fixture"},
+  "consensus": null,
+  "callMetrics": [],
+  "guidance": [],
+  "conferenceCall": null
+}

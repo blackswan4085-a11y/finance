@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>4분할 차트 · 신고가/정배열 스크리너</title>
+  <link rel="stylesheet" href="/chart-assets/styles.css">
+  <style>
+    .app-shell{min-height:640px}
+    .topbar{gap:12px}.topbar-actions{gap:10px;flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+    .back-link{color:#2962ff;font-size:12px;font-weight:700;text-decoration:none}.back-link:hover{text-decoration:underline}
+    .workspace-note{color:#8894a5;font-size:12px}
+    .shared-controls{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 14px;border-bottom:1px solid #e6eaf0;background:#fff}
+    .shared-controls strong{color:#293550;font-size:12px;margin-right:2px}
+    .shared-controls label{display:flex;align-items:center;gap:5px;color:#66758e;font-size:11px;font-weight:650}
+    .shared-controls input{width:128px;height:29px;border:1px solid #dce3ed;border-radius:5px;background:#fff;color:#293550;padding:0 7px;font:inherit;font-size:11px}
+    .shared-controls button{height:29px;border:1px solid #dce3ed;border-radius:5px;background:#f7f9fc;color:#293550;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer}
+    .shared-controls button:hover{background:#eaf0ff;color:#2962ff}.shared-controls .range-buttons button{border:0;background:transparent}
+    .shared-message{color:#a74444;font-size:11px;min-height:14px}.shared-message:empty{display:none}#exportMessage{color:#66758e}body.dark #exportMessage{color:#9ba9bd}
+    .template-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:4px 14px;border-bottom:1px solid #e6eaf0;background:#fff;flex:none;font-size:11px;color:#66758e}.template-controls .text-button{font-size:11px;height:25px}.template-controls .back-link{font-size:11px}body.dark .template-controls{background:#171e2b;border-color:#293344;color:#9ba9bd}
+    .multi-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;gap:8px;padding:8px;background:#eef2f7}
+    .mini-panel{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;border:1px solid #dde4ee;border-radius:9px;overflow:hidden}
+    .pane-config{display:flex;flex-direction:column;gap:4px;padding:6px 9px;border-bottom:1px solid #e6eaf0}
+    .pane-row{display:flex;align-items:center;gap:4px;min-width:0}
+    .pane-row input,.pane-row select{height:26px;min-width:0;border:1px solid #dce3ed;border-radius:5px;background:#fff;color:#293550;padding:0 5px;font-size:11px}
+    .pane-row button{height:26px;flex:none;border:1px solid #dce3ed;border-radius:5px;background:#f7f9fc;color:#293550;padding:0 7px;font-size:11px;font-weight:700;cursor:pointer}
+    .pane-row button:hover{background:#eaf0ff;color:#2962ff}.pane-row button:disabled,.pane-row select:disabled{opacity:.5;cursor:default}
+    .pane-interval{flex:none;width:58px}.pane-symbol{flex:1}.pane-compare{width:115px;flex:none}.pane-mode{width:90px;flex:none}
+    .pane-chips{display:flex;align-items:center;flex-wrap:wrap;gap:3px;min-width:0;flex:1}
+    .comparison-chip{display:inline-flex;align-items:center;gap:3px;border-radius:4px;background:#eaf0ff;color:#2962ff;padding:3px 4px 3px 6px;font-size:10px;font-weight:700;max-width:100%}
+    .comparison-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.comparison-chip button{height:16px;width:16px;padding:0;border:0;background:transparent;color:inherit;font-size:13px}
+    .pane-message{color:#a74444;font-size:10px;min-height:0}.pane-message:empty{display:none}
+    .mini-panel .chart-toolbar{height:35px;padding:0 10px;gap:6px}.pane-title{font-size:12px;font-weight:800;color:#26334a;white-space:nowrap}
+    .pane-toolbar{display:flex;align-items:center;gap:2px;min-width:0}.pane-toolbar .select-control,.pane-toolbar .text-button{height:25px;padding:0 4px;font-size:10px}
+    .mini-panel .chart-heading{min-height:44px;padding:7px 10px 2px;gap:8px}.mini-panel .instrument-title{font-size:12px;gap:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    .mini-panel .instrument-title>span:not(.symbol-badge){font-size:10px}.mini-panel .symbol-badge{width:20px;height:20px;font-size:10px;margin-right:2px;flex:none}
+    .mini-panel .ohlc-readout{margin:3px 0 0;font-size:10px;gap:6px;flex-wrap:wrap}
+    .mini-panel .chart-stage{min-height:0}.mini-panel .volume-caption{left:10px}
+    .indicator-menu{left:auto;right:8px;top:99px;width:min(340px,calc(100% - 16px));max-height:min(350px,55vh)}
+    .chart-error{display:none;position:absolute;inset:0;z-index:4;place-items:center;padding:24px;background:#ffffffed;color:#a33;text-align:center;font-size:12px}.chart-error.visible{display:grid}
+    body.dark .shared-controls,body.dark .pane-config{background:#171e2b;border-color:#293344}body.dark .multi-grid{background:#101722}body.dark .mini-panel{background:#171e2b;border-color:#344154}
+    body.dark .pane-title,body.dark .shared-controls strong{color:#e4e9f2}body.dark .workspace-note,body.dark .shared-controls label{color:#9ba9bd}
+    body.dark .shared-controls input,body.dark .shared-controls button,body.dark .pane-row input,body.dark .pane-row select,body.dark .pane-row button{background:#202a3a;border-color:#39475c;color:#d9e3f3}
+    body.dark .comparison-chip{background:#23375d;color:#a6c2ff}body.dark .chart-error{background:#171e2bf0;color:#ff9a9a}
+    @media(max-width:900px){.app-shell{height:auto;min-height:100vh}.multi-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.mini-panel{height:475px}.topbar{height:auto;min-height:56px;padding:10px;flex-wrap:wrap}.topbar-actions{margin-left:auto}.mini-panel .chart-stage{min-height:230px}}
+    @media(max-width:500px){.shared-controls{padding:8px}.mini-panel{height:450px}.pane-config{padding:5px}.pane-compare{width:86px}.pane-mode{width:78px}.pane-row input,.pane-row select,.pane-row button{font-size:10px}.mini-panel .chart-toolbar{padding:0 5px}.pane-toolbar .select-control,.pane-toolbar .text-button{font-size:9px;padding:0 2px}.mini-panel .chart-heading{padding:6px 8px 1px}.mini-panel .instrument-title{font-size:11px}.mini-panel .ohlc-readout{font-size:9px;gap:4px}.indicator-menu{right:4px;width:calc(100% - 8px)}}
+  </style>
+  <link rel="stylesheet" href="/ui.css">
+  <script src="/ui.js"></script>
+  <script src="/chart-assets/indicators.js" defer></script>
+  <script src="/chart-assets/chart.js" defer></script>
+  <script src="/chart-view.js" defer></script>
+</head>
+<body class="finance-chart">
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▥</span><span>Chart Studio</span><span class="prototype-tag">4분할</span></div>
+    <span class="workspace-note">기간은 공통 · 종목과 봉 주기는 차트별 설정</span>
+    <div class="topbar-actions"><button id="copyChartImage" class="text-button" type="button" disabled>이미지 복사</button><button id="saveChartImage" class="text-button" type="button" disabled>PNG 저장</button><button id="refreshCatalog" class="update-button" aria-describedby="catalogMessage" type="button">ETF 목록 업데이트</button><a class="back-link" href="/industries">산업 분류</a><a class="back-link" href="/weekly">← 스크리너</a><button id="themeButton" data-theme-toggle class="icon-button" title="테마 변경" aria-label="테마 변경">☾</button></div>
+  </header>
+  <section class="shared-controls" aria-label="공통 표시 기간">
+    <strong>공통 기간</strong>
+    <label>시작 <input id="rangeStart" type="date"></label>
+    <label>종료 <input id="rangeEnd" type="date"></label>
+    <button id="applyRange" type="button">이동</button>
+    <div class="range-buttons" aria-label="기간 바로가기"><button data-range="30">1M</button><button data-range="90">3M</button><button data-range="180">6M</button><button data-range="365">1Y</button><button data-range="all">전체</button></div>
+    <span id="exportMessage" class="shared-message" role="status" aria-live="polite"></span>
+    <span id="catalogMessage" class="shared-message update-status" role="status" aria-live="polite"></span>
+    <span id="sharedMessage" class="shared-message" role="status" aria-live="polite"></span>
+  </section>
+  <div class="template-controls"><button id="applyChartDefaults" class="text-button" type="button" disabled>기본 구성 적용</button><a id="sectorEtfLink" class="back-link" href="/sector-etfs" target="_blank" rel="noopener">섹터 ETF 설정</a><span id="templateMessage" role="status" aria-live="polite"></span></div>
+  <main id="grid" class="multi-grid" aria-label="4분할 차트"></main>
+</div>
+</body>
+</html>

@@ -2,6 +2,16 @@
 #  주식 신고가 / 정배열 스크리너 설정
 # ==========================================================
 
+# 실적 생성기·원문·완성본은 Finance 내부에 보관합니다.
+earnings:
+  source_dir: earnings
+
+# 수출입 통계: Finance 내부 DB를 사용합니다.
+# API 키는 CUSTOMS_API_KEY 환경변수 또는 .env에 설정하세요.
+customs:
+  db_path: customs_workspace/trade.db
+  months: 60
+
 # 스캔할 시장 (원하는 것만 켜세요)
 #   한국: KOSPI, KOSDAQ
 #   미국: NASDAQ, NYSE
@@ -71,19 +81,22 @@ recap:
   #   예) codex:  "codex exec --skip-git-repo-check --sandbox read-only {prompt}"
   #       claude: "claude -p"   (claude는 stdin 입력도 지원)
   #
+  #   ※ Astra/high로 분야별 3종 + 전체 데이터 종합 1종, 총 4종 생성.
   #   ※ codex 플래그 설명:
+  #     --model gpt-6-astra    : 코멘터리 모델을 Astra로 지정
+  #     -c model_reasoning_effort=high : 해석 작업에 사용할 추론 수준
   #     --skip-git-repo-check : git 저장소 밖에서도 실행 허용 (없으면 'Not inside a
   #                             trusted directory' 에러로 코멘터리가 비어서 나옴)
   #     --sandbox read-only   : 모델이 임의 셸 명령을 실행하지 않도록 읽기전용 (안전)
   #     --color never         : 터미널 색상 escape 코드 제거 (출력 깔끔)
-  commentary_cmd: "codex exec --skip-git-repo-check --sandbox read-only --color never {prompt}"
-  commentary_timeout: 180      # 초. CLI 응답 대기 한도
+  commentary_cmd: "codex exec --model gpt-6-astra -c model_reasoning_effort=high --skip-git-repo-check --sandbox read-only --color never {prompt}"
+  commentary_timeout: 300      # 초. 각 코멘터리 CLI 응답 대기 한도 (총 4회)
   commentary_enabled: true     # false면 지수 표만 생성(코멘터리 skip)
   lookback_days: 400           # 52주 비교/YTD 위해 1년+ 확보
 
   # 표시할 지수 목록 (group=행 그룹, name=표시명, symbol=FDR 티커)
   #   '^' 접두사(Yahoo 소스)가 최신값 안정적 — 검증됨
-  #   중국 본토 지수(SSEC/000300)는 '^' 없는 FDR 네이티브 심볼이어야 받아짐
+  #   상해종합(SSEC)은 '^' 없는 FDR 네이티브 심볼 사용
   #   글로벌 주식시장 시총 상위 시장을 지역별로 수록
   indices:
     - { group: "한국",   name: "코스피",            symbol: "^KS11" }
@@ -96,7 +109,6 @@ recap:
     - { group: "일본",   name: "니케이225",         symbol: "^N225" }
     - { group: "중화권", name: "대만가권",          symbol: "^TWII" }
     - { group: "중화권", name: "상해종합",          symbol: "SSEC" }
-    - { group: "중화권", name: "CSI300",           symbol: "000300" }
     - { group: "중화권", name: "홍콩 항셍",         symbol: "^HSI" }
     - { group: "인도",   name: "센섹스",            symbol: "^BSESN" }
     - { group: "인도",   name: "니프티50",          symbol: "^NSEI" }
@@ -106,32 +118,45 @@ recap:
     - { group: "유럽",   name: "프랑스 CAC40",      symbol: "^FCHI" }
     - { group: "북미",   name: "캐나다 TSX",        symbol: "^GSPTSE" }
 
-  # 1-2. 주요 원자재 — FDR 선물 심볼('=F'). 검증 완료.
+  # 1-2. 주요 원자재 — Yahoo 선물 심볼('=F'). 시세는 업데이트 시 수집.
   commodities:
-    - { group: "귀금속",   name: "금",        symbol: "GC=F" }
-    - { group: "귀금속",   name: "은",        symbol: "SI=F" }
-    - { group: "귀금속",   name: "플래티넘",   symbol: "PL=F" }
-    - { group: "귀금속",   name: "팔라듐",     symbol: "PA=F" }
-    - { group: "산업금속", name: "구리",       symbol: "HG=F" }
-    - { group: "에너지",   name: "WTI 원유",   symbol: "CL=F" }
-    - { group: "에너지",   name: "브렌트유",   symbol: "BZ=F" }
-    - { group: "에너지",   name: "천연가스",   symbol: "NG=F" }
-    - { group: "농산물",   name: "옥수수",     symbol: "ZC=F" }
-    - { group: "농산물",   name: "밀",        symbol: "ZW=F" }
-    - { group: "농산물",   name: "대두",       symbol: "ZS=F" }
+    - { group: "귀금속", name: "금", symbol: "GC=F" }
+    - { group: "귀금속", name: "은", symbol: "SI=F" }
+    - { group: "귀금속", name: "플래티넘", symbol: "PL=F" }
+    - { group: "귀금속", name: "팔라듐", symbol: "PA=F" }
+    - { group: "산업금속", name: "구리", symbol: "HG=F" }
+    - { group: "에너지", name: "WTI 원유", symbol: "CL=F" }
+    - { group: "에너지", name: "브렌트유", symbol: "BZ=F" }
+    - { group: "에너지", name: "천연가스", symbol: "NG=F" }
+    - { group: "에너지", name: "휘발유", symbol: "RB=F" }
+    - { group: "에너지", name: "난방유", symbol: "HO=F" }
+    - { group: "농산물", name: "옥수수", symbol: "ZC=F" }
+    - { group: "농산물", name: "밀", symbol: "ZW=F" }
+    - { group: "농산물", name: "대두", symbol: "ZS=F" }
+    - { group: "농산물", name: "대두유", symbol: "ZL=F" }
+    - { group: "농산물", name: "커피", symbol: "KC=F" }
+    - { group: "농산물", name: "코코아", symbol: "CC=F" }
+    - { group: "농산물", name: "설탕", symbol: "SB=F" }
+    - { group: "농산물", name: "면화", symbol: "CT=F" }
 
   # 1-3. 국채 금리 (네이버 금융 공개 API, 일별, 키 불필요). 등락은 bp.
-  #   code = 네이버 reutersCode (예: US10YT=RR). 품목 가감은 이 목록만 편집.
+  #   code = Reuters RIC (예: US10YT=RR). 국가별 2년물/10년물.
+  #   공급자가 반환하지 않는 항목은 조회 실패로 표시 (다른 만기로 대체하지 않음).
   rates:
-    - { group: "미국",   name: "미국 2년",  code: "US2YT=RR" }
-    - { group: "미국",   name: "미국 10년", code: "US10YT=RR" }
-    - { group: "미국",   name: "미국 30년", code: "US30YT=RR" }
-    - { group: "한국",   name: "한국 3년",  code: "KR3YT=RR" }
-    - { group: "한국",   name: "한국 10년", code: "KR10YT=RR" }
-    - { group: "유럽",   name: "독일 10년", code: "DE10YT=RR" }
-    - { group: "유럽",   name: "영국 10년", code: "GB10YT=RR" }
-    - { group: "아시아", name: "일본 10년", code: "JP10YT=RR" }
-    - { group: "아시아", name: "중국 10년", code: "CN10YT=RR" }
+    - { group: "미국", name: "미국 2년", code: "US2YT=RR" }
+    - { group: "미국", name: "미국 10년", code: "US10YT=RR" }
+    - { group: "한국", name: "한국 2년", code: "KR2YT=RR" }
+    - { group: "한국", name: "한국 10년", code: "KR10YT=RR" }
+    - { group: "독일", name: "독일 2년", code: "DE2YT=RR" }
+    - { group: "독일", name: "독일 10년", code: "DE10YT=RR" }
+    - { group: "영국", name: "영국 2년", code: "GB2YT=RR" }
+    - { group: "영국", name: "영국 10년", code: "GB10YT=RR" }
+    - { group: "프랑스", name: "프랑스 2년", code: "FR2YT=RR" }
+    - { group: "프랑스", name: "프랑스 10년", code: "FR10YT=RR" }
+    - { group: "일본", name: "일본 2년", code: "JP2YT=RR" }
+    - { group: "일본", name: "일본 10년", code: "JP10YT=RR" }
+    - { group: "중국", name: "중국 2년", code: "CN2YT=RR" }
+    - { group: "중국", name: "중국 10년", code: "CN10YT=RR" }
 
   # 1-3. 환율 (네이버 금융 공개 API). 등락은 %.
   fx:

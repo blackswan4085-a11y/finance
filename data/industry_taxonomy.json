@@ -1,0 +1,2207 @@
+{
+  "version": 1,
+  "source": {
+    "file": "KUIM_전체결과표.xlsx",
+    "source_date": "2026-10-14",
+    "sha256": "b56f233ad8863d8987560ecb5a045e73daac4a47f96a723e731301b4d1bf0d65",
+    "imported_at": "2026-10-14T20:15:04",
+    "company_rows": 8298,
+    "counts": {
+      "major": 14,
+      "middle": 54,
+      "minor": 198
+    }
+  },
+  "nodes": [
+    {
+      "id": "S01",
+      "name": "반도체·전자",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G001",
+      "name": "반도체 설계·제품",
+      "level": "middle",
+      "parent_id": "S01"
+    },
+    {
+      "id": "I0001",
+      "name": "연산·AI 반도체",
+      "level": "minor",
+      "parent_id": "G001",
+      "definition": "CPU·GPU·가속기 등 연산 반도체 설계·제품 판매",
+      "include": "팹리스·자체 설계 연산 플랫폼",
+      "exclude": "단순 서버 조립; 메모리; 설계도구"
+    },
+    {
+      "id": "I0002",
+      "name": "아날로그·전력 반도체",
+      "level": "minor",
+      "parent_id": "G001",
+      "definition": "전력 제어와 신호 변환용 반도체의 설계·판매",
+      "include": "PMIC; 아날로그 IC; 전력 소자; SiC·GaN 소자",
+      "exclude": "수탁생산; 완성 전력장비"
+    },
+    {
+      "id": "I0003",
+      "name": "통신·연결 반도체",
+      "level": "minor",
+      "parent_id": "G001",
+      "definition": "무선·유선 통신 및 데이터 연결용 반도체",
+      "include": "RF; 모뎀; 스위치 IC; 광통신용 IC",
+      "exclude": "통신장비 완제품; 네트워크 운영"
+    },
+    {
+      "id": "I0004",
+      "name": "제어·센서·범용 로직",
+      "level": "minor",
+      "parent_id": "G001",
+      "definition": "제어·센싱·표시 등 특화 기능의 비메모리 제품",
+      "include": "MCU; CIS; DDI; FPGA; 복합 비메모리 포트폴리오",
+      "exclude": "광학 모듈; 단순 수탁생산"
+    },
+    {
+      "id": "G002",
+      "name": "반도체 생산",
+      "level": "middle",
+      "parent_id": "S01"
+    },
+    {
+      "id": "I0005",
+      "name": "DRAM 메모리",
+      "level": "minor",
+      "parent_id": "G002",
+      "definition": "휘발성 메모리 설계·생산·판매",
+      "include": "범용 DRAM; HBM; 모바일 DRAM",
+      "exclude": "DRAM 사업 없이 NAND 제품만 영위하는 활동; 장비 제조; 단순 모듈 조립"
+    },
+    {
+      "id": "I0006",
+      "name": "NAND·스토리지 반도체",
+      "level": "minor",
+      "parent_id": "G002",
+      "definition": "비휘발성 메모리 칩을 중심으로 한 사업",
+      "include": "NAND; 메모리 제조사가 통합 판매하는 SSD",
+      "exclude": "NAND 사업 없이 DRAM 제품만 영위하는 활동; 독립 스토리지 시스템 사업"
+    },
+    {
+      "id": "I0007",
+      "name": "파운드리",
+      "level": "minor",
+      "parent_id": "G002",
+      "definition": "고객 설계에 따른 반도체 웨이퍼 수탁생산",
+      "include": "선단·성숙공정; 특화 파운드리",
+      "exclude": "자체 제품 중심 IDM; 후공정만 수행"
+    },
+    {
+      "id": "I0008",
+      "name": "복합 반도체 제조",
+      "level": "minor",
+      "parent_id": "G002",
+      "definition": "다수 반도체 제품·제조 사업 중 단일 세부산업의 우세가 없는 경우",
+      "include": "메모리·로직·수탁생산 혼합의 반도체 기업",
+      "exclude": "가전 등 비반도체와 동등한 복합기업"
+    },
+    {
+      "id": "G003",
+      "name": "반도체 장비·소재·후공정",
+      "level": "middle",
+      "parent_id": "S01"
+    },
+    {
+      "id": "I0009",
+      "name": "전공정 장비",
+      "level": "minor",
+      "parent_id": "G003",
+      "definition": "웨이퍼 위 회로 형성·계측에 사용하는 설비",
+      "include": "노광; 증착; 식각; 세정; 전공정 검사",
+      "exclude": "후공정 접합·패키징; 소재 소모품"
+    },
+    {
+      "id": "I0010",
+      "name": "후공정·테스트 장비",
+      "level": "minor",
+      "parent_id": "G003",
+      "definition": "칩 절단·접합·패키징·전기검사에 사용하는 설비",
+      "include": "TC 본더; 패키징 장비; 테스터; 핸들러",
+      "exclude": "수탁 패키징 서비스; 전공정 설비"
+    },
+    {
+      "id": "I0011",
+      "name": "반도체 소재·공정 부품",
+      "level": "minor",
+      "parent_id": "G003",
+      "definition": "반도체 공정에 특화된 소재와 교체 부품",
+      "include": "웨이퍼; 포토레지스트; 특수가스; 쿼츠; 테스트 소켓",
+      "exclude": "범용 화학 주력; 패키지 기판"
+    },
+    {
+      "id": "I0012",
+      "name": "반도체 수탁 패키징·테스트",
+      "level": "minor",
+      "parent_id": "G003",
+      "definition": "고객 칩을 후공정 처리하고 서비스 대가 수취",
+      "include": "패키징; 조립; 테스트 전문 수탁",
+      "exclude": "장비 판매; 파운드리; 자체 칩 제조"
+    },
+    {
+      "id": "G004",
+      "name": "전자 부품·디스플레이",
+      "level": "middle",
+      "parent_id": "S01"
+    },
+    {
+      "id": "I0013",
+      "name": "PCB·반도체 패키지 기판",
+      "level": "minor",
+      "parent_id": "G004",
+      "definition": "전자 연결용 회로기판과 칩 패키지 기판 제조",
+      "include": "PCB; FPCB; FC-BGA; IC 기판",
+      "exclude": "반도체 웨이퍼; 범용 동박"
+    },
+    {
+      "id": "I0014",
+      "name": "수동부품·커넥터",
+      "level": "minor",
+      "parent_id": "G004",
+      "definition": "전자회로의 수동 기능 및 접속 부품 제조",
+      "include": "MLCC; 인덕터; 커넥터; 케이블 어셈블리",
+      "exclude": "전력망 케이블; 능동 반도체"
+    },
+    {
+      "id": "I0015",
+      "name": "디스플레이 패널·전용 소재",
+      "level": "minor",
+      "parent_id": "G004",
+      "definition": "영상 표시 패널 및 전용 핵심 소재 사업",
+      "include": "OLED·LCD 패널; 발광재료; 편광판",
+      "exclude": "완제품 TV; 패널 제조장비"
+    },
+    {
+      "id": "I0016",
+      "name": "광학·센서 모듈",
+      "level": "minor",
+      "parent_id": "G004",
+      "definition": "광학계와 반도체를 통합한 센싱·영상 부품",
+      "include": "카메라 모듈; 렌즈; 광학 센서 모듈",
+      "exclude": "이미지센서 칩 단품; 의료용 완성기기"
+    },
+    {
+      "id": "I0017",
+      "name": "전자 계측·산업용 단말",
+      "level": "minor",
+      "parent_id": "G004",
+      "definition": "전용 전자 계측기 및 거래·데이터 입력 단말",
+      "include": "계측기; 바코드 단말; POS 하드웨어",
+      "exclude": "결제 처리 수수료; 반도체 검사장비"
+    },
+    {
+      "id": "G005",
+      "name": "전자 시스템·제조·유통",
+      "level": "middle",
+      "parent_id": "S01"
+    },
+    {
+      "id": "I0018",
+      "name": "스마트기기·PC",
+      "level": "minor",
+      "parent_id": "G005",
+      "definition": "컴퓨팅·통신 목적의 소비자 완성 전자기기",
+      "include": "스마트폰; PC; 태블릿; 웨어러블",
+      "exclude": "백색가전; 통신망 운영"
+    },
+    {
+      "id": "I0019",
+      "name": "서버·스토리지 시스템",
+      "level": "minor",
+      "parent_id": "G005",
+      "definition": "기업용 계산·저장 하드웨어 시스템 공급",
+      "include": "서버; 스토리지 어레이; 고성능 시스템",
+      "exclude": "클라우드 사용료; 칩 자체 판매"
+    },
+    {
+      "id": "I0020",
+      "name": "통신·네트워크 장비",
+      "level": "minor",
+      "parent_id": "G005",
+      "definition": "통신사업자와 기업 네트워크용 완성장비",
+      "include": "라우터; 스위치; 기지국; 광모듈",
+      "exclude": "통신 칩; 회선 서비스"
+    },
+    {
+      "id": "I0021",
+      "name": "전자 위탁생산",
+      "level": "minor",
+      "parent_id": "G005",
+      "definition": "고객 설계 제품을 제조·조립하는 서비스",
+      "include": "EMS; 전자 ODM; 시스템 조립",
+      "exclude": "자체 브랜드 제품 주력; OSAT"
+    },
+    {
+      "id": "I0022",
+      "name": "전자·IT 전문 유통",
+      "level": "minor",
+      "parent_id": "G005",
+      "definition": "전자부품·IT 제품의 전문 도매·유통",
+      "include": "반도체 유통; 기업용 IT 유통",
+      "exclude": "소비자 소매; 자체 제조"
+    },
+    {
+      "id": "S02",
+      "name": "소프트웨어·IT서비스",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G006",
+      "name": "기업용 애플리케이션",
+      "level": "middle",
+      "parent_id": "S02"
+    },
+    {
+      "id": "I0023",
+      "name": "ERP·CRM·업무 소프트웨어",
+      "level": "minor",
+      "parent_id": "G006",
+      "definition": "기업의 핵심 업무 처리를 지원하는 제품형 소프트웨어",
+      "include": "회계; 인사; CRM; 협업; ERP",
+      "exclude": "고객별 SI 용역; 광고 플랫폼"
+    },
+    {
+      "id": "I0024",
+      "name": "산업별 업무 소프트웨어",
+      "level": "minor",
+      "parent_id": "G006",
+      "definition": "특정 업종의 전문 업무를 지원하는 소프트웨어",
+      "include": "금융·의료·물류·교육 업무 솔루션",
+      "exclude": "직접 의료·금융 영업; 범용 ERP"
+    },
+    {
+      "id": "I0025",
+      "name": "설계·제작 소프트웨어",
+      "level": "minor",
+      "parent_id": "G006",
+      "definition": "디지털 콘텐츠·제품·칩 설계용 소프트웨어",
+      "include": "EDA; CAD; CAE; 영상·그래픽 제작 도구",
+      "exclude": "칩 IP 로열티만; 게임 콘텐츠"
+    },
+    {
+      "id": "I0026",
+      "name": "반도체 IP·설계 서비스",
+      "level": "minor",
+      "parent_id": "G006",
+      "definition": "칩 설계 자산의 라이선스·로열티 및 설계 용역",
+      "include": "CPU IP; 인터페이스 IP; ASIC 설계 서비스",
+      "exclude": "칩 제품 판매 주력; EDA 제품"
+    },
+    {
+      "id": "G007",
+      "name": "시스템·데이터 소프트웨어",
+      "level": "middle",
+      "parent_id": "S02"
+    },
+    {
+      "id": "I0027",
+      "name": "운영체제·개발 인프라",
+      "level": "minor",
+      "parent_id": "G007",
+      "definition": "소프트웨어 실행과 개발의 기반 제품",
+      "include": "운영체제; 미들웨어; 개발·운영 도구",
+      "exclude": "물리 서버; 소비자 콘텐츠"
+    },
+    {
+      "id": "I0028",
+      "name": "데이터·AI 소프트웨어",
+      "level": "minor",
+      "parent_id": "G007",
+      "definition": "데이터 관리·분석과 AI 모델 실행을 제품으로 공급",
+      "include": "데이터베이스; 분석 플랫폼; AI 응용·모델 서비스",
+      "exclude": "AI 칩; 단순 AI 활용 기업"
+    },
+    {
+      "id": "I0029",
+      "name": "사이버보안 소프트웨어",
+      "level": "minor",
+      "parent_id": "G007",
+      "definition": "정보시스템의 접근·위협·데이터 보호 제품",
+      "include": "엔드포인트; 네트워크 보안; IAM; 보안 플랫폼",
+      "exclude": "물리 경비; 범용 IT 서비스"
+    },
+    {
+      "id": "G008",
+      "name": "클라우드·인터넷 인프라",
+      "level": "middle",
+      "parent_id": "S02"
+    },
+    {
+      "id": "I0030",
+      "name": "클라우드 인프라 서비스",
+      "level": "minor",
+      "parent_id": "G008",
+      "definition": "계산·저장·네트워크 자원을 사용량 기반 제공",
+      "include": "IaaS; PaaS; 관리형 클라우드",
+      "exclude": "데이터센터 부동산 임대; 서버 판매"
+    },
+    {
+      "id": "I0031",
+      "name": "호스팅·CDN·도메인",
+      "level": "minor",
+      "parent_id": "G008",
+      "definition": "인터넷 서비스 제공을 위한 호스팅·전달 인프라",
+      "include": "웹호스팅; CDN; 도메인 등록",
+      "exclude": "광고 플랫폼; 통신망 운영"
+    },
+    {
+      "id": "I0032",
+      "name": "통신 API·고객접점 플랫폼",
+      "level": "minor",
+      "parent_id": "G008",
+      "definition": "통신 기능을 개발자·기업에 API로 제공",
+      "include": "CPaaS; 메시징 API; 컨택센터 플랫폼",
+      "exclude": "통신 회선; 일반 CRM"
+    },
+    {
+      "id": "G009",
+      "name": "IT 구축·운영",
+      "level": "middle",
+      "parent_id": "S02"
+    },
+    {
+      "id": "I0033",
+      "name": "IT 컨설팅·시스템 통합",
+      "level": "minor",
+      "parent_id": "G009",
+      "definition": "고객 맞춤 정보시스템 설계·구축 용역",
+      "include": "SI; 디지털 전환 컨설팅; 프로젝트 개발",
+      "exclude": "고객 맞춤 설계·구축 용역 없이 제품형 소프트웨어만 판매하는 활동"
+    },
+    {
+      "id": "I0034",
+      "name": "IT 운영·아웃소싱",
+      "level": "minor",
+      "parent_id": "G009",
+      "definition": "고객 정보시스템을 지속 운영·관리",
+      "include": "IT 아웃소싱; MSP; 시스템 유지보수",
+      "exclude": "고객 정보시스템 운영·관리 없이 자체 클라우드 자원만 판매하는 활동; 일반 BPO"
+    },
+    {
+      "id": "I0035",
+      "name": "디지털 엔지니어링",
+      "level": "minor",
+      "parent_id": "G009",
+      "definition": "제품·플랫폼의 기술 개발을 외주 수행",
+      "include": "임베디드 개발; 디지털 제품 엔지니어링",
+      "exclude": "단순 인력 파견; 건설 설계"
+    },
+    {
+      "id": "S03",
+      "name": "통신·미디어",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G010",
+      "name": "통신 서비스",
+      "level": "middle",
+      "parent_id": "S03"
+    },
+    {
+      "id": "I0036",
+      "name": "통합·이동통신",
+      "level": "minor",
+      "parent_id": "G010",
+      "definition": "유무선 회선·이동통신을 가입자에게 제공",
+      "include": "통합 통신사; 이동통신사; MVNO",
+      "exclude": "기지국 장비; 타워 임대"
+    },
+    {
+      "id": "I0037",
+      "name": "유선·광대역·케이블",
+      "level": "minor",
+      "parent_id": "G010",
+      "definition": "고정 회선·인터넷 및 케이블 접속 제공",
+      "include": "광대역 사업자; 케이블 통신",
+      "exclude": "콘텐츠 제작; 일반 위성 제조"
+    },
+    {
+      "id": "I0038",
+      "name": "위성 통신 서비스",
+      "level": "minor",
+      "parent_id": "G010",
+      "definition": "위성을 이용해 연결·통신 용량을 판매",
+      "include": "위성 회선; 위성 데이터 통신",
+      "exclude": "위성 제작; 발사 서비스"
+    },
+    {
+      "id": "G011",
+      "name": "인터넷·광고 플랫폼",
+      "level": "middle",
+      "parent_id": "S03"
+    },
+    {
+      "id": "I0039",
+      "name": "검색·소셜 플랫폼",
+      "level": "minor",
+      "parent_id": "G011",
+      "definition": "검색·소셜 이용자를 기반으로 광고 등을 판매",
+      "include": "포털; 검색; SNS; 커뮤니티",
+      "exclude": "상품 중개가 핵심인 전자상거래"
+    },
+    {
+      "id": "I0040",
+      "name": "광고기술·광고 중개",
+      "level": "minor",
+      "parent_id": "G011",
+      "definition": "광고 구매·판매·측정을 기술로 중개",
+      "include": "DSP; SSP; 광고 측정 플랫폼",
+      "exclude": "광고 구매·판매·측정 중개 플랫폼 없이 자체 광고 지면만 판매하는 활동"
+    },
+    {
+      "id": "I0041",
+      "name": "광고·마케팅 서비스",
+      "level": "minor",
+      "parent_id": "G011",
+      "definition": "광고 기획·제작·집행·브랜드 마케팅 용역",
+      "include": "광고대행; 옥외광고; 마케팅 에이전시",
+      "exclude": "제품형 광고 소프트웨어"
+    },
+    {
+      "id": "G012",
+      "name": "콘텐츠·엔터테인먼트",
+      "level": "middle",
+      "parent_id": "S03"
+    },
+    {
+      "id": "I0042",
+      "name": "게임 개발·퍼블리싱",
+      "level": "minor",
+      "parent_id": "G012",
+      "definition": "게임 콘텐츠와 운영 서비스를 판매",
+      "include": "PC·모바일·콘솔 게임; 게임 플랫폼",
+      "exclude": "게임용 반도체; 일반 소셜"
+    },
+    {
+      "id": "I0043",
+      "name": "영상·방송·스트리밍",
+      "level": "minor",
+      "parent_id": "G012",
+      "definition": "영상 IP의 제작·유통 및 방송·구독 서비스",
+      "include": "스튜디오; 방송; 영상 스트리밍",
+      "exclude": "케이블 접속 서비스 중심"
+    },
+    {
+      "id": "I0044",
+      "name": "음악·공연·아티스트",
+      "level": "minor",
+      "parent_id": "G012",
+      "definition": "음악 IP·아티스트·공연 사업",
+      "include": "음반; 매니지먼트; 음악 스트리밍; 공연",
+      "exclude": "종합 레저시설; 광고대행"
+    },
+    {
+      "id": "I0045",
+      "name": "출판·정보 콘텐츠",
+      "level": "minor",
+      "parent_id": "G012",
+      "definition": "문자·이미지 기반 콘텐츠를 발행·유통",
+      "include": "출판; 뉴스; 웹툰; 웹소설",
+      "exclude": "기업용 금융 데이터; 광고기술"
+    },
+    {
+      "id": "S04",
+      "name": "금융·결제",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G013",
+      "name": "은행·예대금융",
+      "level": "middle",
+      "parent_id": "S04"
+    },
+    {
+      "id": "I0046",
+      "name": "종합 은행·은행지주",
+      "level": "minor",
+      "parent_id": "G013",
+      "definition": "예금·대출 중심의 종합 은행업",
+      "include": "대형 은행; 은행 중심 금융지주",
+      "exclude": "보험·증권 중심 지주"
+    },
+    {
+      "id": "I0047",
+      "name": "지역 은행",
+      "level": "minor",
+      "parent_id": "G013",
+      "definition": "특정 지역 고객에 집중한 예대금융",
+      "include": "지역은행; 지역은행 중심 지주",
+      "exclude": "전국 종합은행; 비은행 대출"
+    },
+    {
+      "id": "I0048",
+      "name": "인터넷·디지털 은행",
+      "level": "minor",
+      "parent_id": "G013",
+      "definition": "은행 면허를 바탕으로 디지털 채널 중심 영업",
+      "include": "인터넷전문은행; 디지털 소매은행",
+      "exclude": "무면허 전자지갑; 대출 중개"
+    },
+    {
+      "id": "I0049",
+      "name": "비은행·특수 금융",
+      "level": "minor",
+      "parent_id": "G013",
+      "definition": "예금은행이 아닌 전문 신용 제공 사업",
+      "include": "리스; 여신전문; 상업대출; 팩토링",
+      "exclude": "신용카드 주력; 모기지 주력"
+    },
+    {
+      "id": "G014",
+      "name": "결제 인프라",
+      "level": "middle",
+      "parent_id": "S04"
+    },
+    {
+      "id": "I0050",
+      "name": "카드·결제 네트워크",
+      "level": "minor",
+      "parent_id": "G014",
+      "definition": "발급기관과 가맹점 측을 연결하는 결제망 운영",
+      "include": "국제 카드 네트워크; 결제망 수수료",
+      "exclude": "대출·발급 수익 중심 카드사; PG"
+    },
+    {
+      "id": "I0051",
+      "name": "가맹점 결제 처리·PG·VAN",
+      "level": "minor",
+      "parent_id": "G014",
+      "definition": "가맹점의 결제 승인·매입·정산을 지원",
+      "include": "PG; VAN; 매입 처리; 통합 결제 솔루션",
+      "exclude": "네트워크 운영; 단말 제조만"
+    },
+    {
+      "id": "I0052",
+      "name": "발급기관 처리·금융 인프라",
+      "level": "minor",
+      "parent_id": "G014",
+      "definition": "은행·카드 발급기관의 원장·카드 처리를 운영",
+      "include": "발급 프로세싱; 코어 금융 처리 서비스",
+      "exclude": "제품 라이선스만; 가맹점 PG 주력"
+    },
+    {
+      "id": "I0053",
+      "name": "전자지갑·통합 디지털 결제",
+      "level": "minor",
+      "parent_id": "G014",
+      "definition": "소비자 지갑과 가맹점 수용망을 결합한 결제 플랫폼",
+      "include": "브랜드 체크아웃; 전자지갑; 결제 생태계",
+      "exclude": "전자지갑·결제 생태계 없이 예금·대출만 영위하는 활동; 지갑 결제 없이 송금만 제공하는 활동"
+    },
+    {
+      "id": "I0054",
+      "name": "송금·국경 간 결제",
+      "level": "minor",
+      "parent_id": "G014",
+      "definition": "개인·기업의 자금 이전과 외환 결제 서비스",
+      "include": "해외송금; B2B 국제 결제",
+      "exclude": "은행 전체; 일반 카드 결제망"
+    },
+    {
+      "id": "G015",
+      "name": "증권·자산운용·시장 인프라",
+      "level": "middle",
+      "parent_id": "S04"
+    },
+    {
+      "id": "I0055",
+      "name": "증권·투자은행",
+      "level": "minor",
+      "parent_id": "G015",
+      "definition": "거래중개·인수·자문 및 자기매매 중심",
+      "include": "증권사; 온라인 브로커; 투자은행",
+      "exclude": "거래소 운영; 운용 수수료 주력"
+    },
+    {
+      "id": "I0056",
+      "name": "자산운용·수탁",
+      "level": "minor",
+      "parent_id": "G015",
+      "definition": "자산 관리·운용·보관의 수수료 사업",
+      "include": "전통·대체 운용; 수탁은행",
+      "exclude": "BDC 자체 투자; 순수 지주"
+    },
+    {
+      "id": "I0057",
+      "name": "거래소·금융 데이터",
+      "level": "minor",
+      "parent_id": "G015",
+      "definition": "거래시장·청산 및 금융정보 인프라 운영",
+      "include": "거래소; 청산; 신용평가; 금융 데이터",
+      "exclude": "일반 뉴스; 증권 중개"
+    },
+    {
+      "id": "I0058",
+      "name": "디지털자산 거래·인프라",
+      "level": "minor",
+      "parent_id": "G015",
+      "definition": "디지털자산 거래·수탁 등의 사업 수수료",
+      "include": "가상자산 거래소; 기관 수탁; 인프라",
+      "exclude": "채굴; 코인 보유만; 결제망 일반"
+    },
+    {
+      "id": "G016",
+      "name": "보험",
+      "level": "middle",
+      "parent_id": "S04"
+    },
+    {
+      "id": "I0059",
+      "name": "생명·연금 보험",
+      "level": "minor",
+      "parent_id": "G016",
+      "definition": "생명 위험과 연금 지급을 인수",
+      "include": "생명보험; 연금; 장기 보장",
+      "exclude": "건강보험 관리서비스; 손해보험"
+    },
+    {
+      "id": "I0060",
+      "name": "손해 보험",
+      "level": "minor",
+      "parent_id": "G016",
+      "definition": "재산·책임·자동차 등 손해 위험 인수",
+      "include": "손해보험; 재산보험; 자동차보험",
+      "exclude": "생명보험; 재보험 전문"
+    },
+    {
+      "id": "I0061",
+      "name": "재보험",
+      "level": "minor",
+      "parent_id": "G016",
+      "definition": "다른 보험사의 위험을 인수",
+      "include": "생명·손해 재보험",
+      "exclude": "원보험; 중개만"
+    },
+    {
+      "id": "I0062",
+      "name": "보험 중개·대리",
+      "level": "minor",
+      "parent_id": "G016",
+      "definition": "보험 위험 인수 없이 판매·자문 수수료 수취",
+      "include": "보험 브로커; 대형 판매대리점",
+      "exclude": "보험료 위험 직접 인수"
+    },
+    {
+      "id": "G017",
+      "name": "소비자금융·투자회사",
+      "level": "middle",
+      "parent_id": "S04"
+    },
+    {
+      "id": "I0063",
+      "name": "카드 발급·소비자 신용",
+      "level": "minor",
+      "parent_id": "G017",
+      "definition": "개인 신용 제공과 카드 발급이 중심",
+      "include": "카드사; BNPL; 개인대출",
+      "exclude": "결제 네트워크; 예금은행"
+    },
+    {
+      "id": "I0064",
+      "name": "모기지 금융·모기지 REIT",
+      "level": "minor",
+      "parent_id": "G017",
+      "definition": "부동산 담보채권의 대출·보유·관리",
+      "include": "모기지 대출; mREIT; 채권 서비스",
+      "exclude": "실물 부동산 임대 REIT"
+    },
+    {
+      "id": "I0065",
+      "name": "사업개발회사·대출 투자회사",
+      "level": "minor",
+      "parent_id": "G017",
+      "definition": "기업대출·지분투자로 이자·분배수익을 얻는 상장 투자회사",
+      "include": "BDC; 유사 대출 투자법인",
+      "exclude": "보통 운용사; 일반 ETF·펀드"
+    },
+    {
+      "id": "I0066",
+      "name": "복합 금융·투자 지주",
+      "level": "minor",
+      "parent_id": "G017",
+      "definition": "단일 금융업 우세 없이 금융·투자 자산을 보유",
+      "include": "복합 금융서비스; 금융 투자지주",
+      "exclude": "은행·보험 주력 지주; 일반 산업지주"
+    },
+    {
+      "id": "S05",
+      "name": "헬스케어",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G018",
+      "name": "의약품·신약",
+      "level": "middle",
+      "parent_id": "S05"
+    },
+    {
+      "id": "I0067",
+      "name": "신약·연구개발 바이오",
+      "level": "minor",
+      "parent_id": "G018",
+      "definition": "특허 의약품의 개발·라이선스·판매",
+      "include": "상업화·임상 단계 신약사; 바이오 플랫폼",
+      "exclude": "제네릭 주력; 단순 생산수탁"
+    },
+    {
+      "id": "I0068",
+      "name": "제네릭·바이오시밀러",
+      "level": "minor",
+      "parent_id": "G018",
+      "definition": "후발 의약품 개발·생산·판매",
+      "include": "제네릭; 바이오시밀러",
+      "exclude": "원개발 신약 중심; CDMO"
+    },
+    {
+      "id": "I0069",
+      "name": "종합 제약",
+      "level": "minor",
+      "parent_id": "G018",
+      "definition": "신약·일반의약품·제네릭이 혼합된 제약사업",
+      "include": "종합제약; 치료제 다제품 사업",
+      "exclude": "소비재 중심 건강식품"
+    },
+    {
+      "id": "I0070",
+      "name": "의약품 위탁개발·생산",
+      "level": "minor",
+      "parent_id": "G018",
+      "definition": "타사 의약품의 공정개발·상업생산 수탁",
+      "include": "바이오·합성 CDMO; CMO",
+      "exclude": "자체 치료제; 임상 CRO"
+    },
+    {
+      "id": "G019",
+      "name": "생명과학 도구·서비스",
+      "level": "middle",
+      "parent_id": "S05"
+    },
+    {
+      "id": "I0071",
+      "name": "임상·전임상 연구수탁",
+      "level": "minor",
+      "parent_id": "G019",
+      "definition": "신약 개발 실험과 임상시험을 대행",
+      "include": "임상 CRO; 독성시험; 전임상",
+      "exclude": "완성 의약품 제조수탁"
+    },
+    {
+      "id": "I0072",
+      "name": "연구기기·시약·소모품",
+      "level": "minor",
+      "parent_id": "G019",
+      "definition": "생명과학 연구·생산에 필요한 도구 공급",
+      "include": "분석기기; 배양재; 연구시약; 실험 소모품",
+      "exclude": "환자 진단서비스; 범용 산업계측"
+    },
+    {
+      "id": "I0073",
+      "name": "진단기기·검사 제품",
+      "level": "minor",
+      "parent_id": "G019",
+      "definition": "환자 검체의 분석 제품과 장비 제공",
+      "include": "체외진단; 분자진단; 진단장비",
+      "exclude": "검사실 서비스만; 연구용 전용"
+    },
+    {
+      "id": "G020",
+      "name": "의료기기·소모품",
+      "level": "middle",
+      "parent_id": "S05"
+    },
+    {
+      "id": "I0074",
+      "name": "수술·치료 기기",
+      "level": "minor",
+      "parent_id": "G020",
+      "definition": "임상 치료와 수술용 기기 공급",
+      "include": "수술로봇; 내시경; 심혈관·정형 기기",
+      "exclude": "일반 산업로봇; 의료서비스"
+    },
+    {
+      "id": "I0075",
+      "name": "의료영상·병원 장비",
+      "level": "minor",
+      "parent_id": "G020",
+      "definition": "병원 진단·관찰·치료 인프라 장비",
+      "include": "영상진단; 환자 모니터; 방사선치료",
+      "exclude": "시약 중심 체외진단"
+    },
+    {
+      "id": "I0076",
+      "name": "치과·미용 의료기기",
+      "level": "minor",
+      "parent_id": "G020",
+      "definition": "치과치료와 의료미용용 기기·재료",
+      "include": "임플란트; 교정; 에너지 기반 미용기기",
+      "exclude": "비의료 화장품; 의료기관 운영"
+    },
+    {
+      "id": "I0077",
+      "name": "의료 소모품·보조기",
+      "level": "minor",
+      "parent_id": "G020",
+      "definition": "반복 사용하는 의료재료와 보조기구",
+      "include": "주사기; 드레싱; 보청기; 재활 보조기",
+      "exclude": "연구 전용 시약; 일반 위생품"
+    },
+    {
+      "id": "G021",
+      "name": "의료 서비스·유통",
+      "level": "middle",
+      "parent_id": "S05"
+    },
+    {
+      "id": "I0078",
+      "name": "병원·의료시설",
+      "level": "minor",
+      "parent_id": "G021",
+      "definition": "환자에게 직접 의료·돌봄 서비스를 제공",
+      "include": "병원; 투석; 요양; 검사실; 동물병원",
+      "exclude": "의료기기 판매; 부동산 임대만"
+    },
+    {
+      "id": "I0079",
+      "name": "건강보험·의료비 관리",
+      "level": "minor",
+      "parent_id": "G021",
+      "definition": "의료보장·의료비 지출 관리를 통합 수행",
+      "include": "관리형 건강보험; 의료비 관리",
+      "exclude": "일반 생명보험; 순수 병원"
+    },
+    {
+      "id": "I0080",
+      "name": "의약·의료 유통",
+      "level": "minor",
+      "parent_id": "G021",
+      "definition": "의약품·의료기기 도매와 공급망 서비스",
+      "include": "의약품 도매; 의료재료 도매; PBM 중심",
+      "exclude": "약국 소비자 소매; 자체 제조"
+    },
+    {
+      "id": "S06",
+      "name": "산업재·자동화",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G022",
+      "name": "산업 기계",
+      "level": "middle",
+      "parent_id": "S06"
+    },
+    {
+      "id": "I0081",
+      "name": "건설·광산 기계",
+      "level": "minor",
+      "parent_id": "G022",
+      "definition": "토공·채굴·중장비 제품과 부품 공급",
+      "include": "굴착기; 광산장비; 건설기계",
+      "exclude": "농기계; 완성 트럭"
+    },
+    {
+      "id": "I0082",
+      "name": "농업 기계",
+      "level": "minor",
+      "parent_id": "G022",
+      "definition": "농작업 기계와 정밀농업 하드웨어",
+      "include": "트랙터; 수확기; 파종기",
+      "exclude": "비료; 종자; 식품가공"
+    },
+    {
+      "id": "I0083",
+      "name": "범용 산업기계·부품",
+      "level": "minor",
+      "parent_id": "G022",
+      "definition": "공정·가공·구동용 범용 기계 공급",
+      "include": "공작기계; 펌프; 밸브; 베어링; 압축기",
+      "exclude": "전용 반도체·배터리 장비"
+    },
+    {
+      "id": "I0084",
+      "name": "공조·냉각·열관리",
+      "level": "minor",
+      "parent_id": "G022",
+      "definition": "건물·산업 시설의 냉난방·냉각 시스템",
+      "include": "HVAC; 칠러; 데이터센터 냉각",
+      "exclude": "가정용 냉장고; 전력 공급장비"
+    },
+    {
+      "id": "G023",
+      "name": "자동화·로봇",
+      "level": "middle",
+      "parent_id": "S06"
+    },
+    {
+      "id": "I0085",
+      "name": "산업용·협동 로봇",
+      "level": "minor",
+      "parent_id": "G023",
+      "definition": "제조·작업 자동화용 로봇 완제품",
+      "include": "산업용 로봇; 협동로봇",
+      "exclude": "수술로봇; 단순 로봇 부품"
+    },
+    {
+      "id": "I0086",
+      "name": "서비스·물류 로봇",
+      "level": "minor",
+      "parent_id": "G023",
+      "definition": "이동·서비스 수행용 로봇과 자동화 시스템",
+      "include": "AMR; 물류로봇; 서비스로봇; 휴머노이드",
+      "exclude": "산업용 고정 로봇; 군용 드론"
+    },
+    {
+      "id": "I0087",
+      "name": "공장 자동화·제어",
+      "level": "minor",
+      "parent_id": "G023",
+      "definition": "생산·공정의 전기적 제어와 운영 자동화",
+      "include": "PLC; DCS; 산업 센서; 서보 시스템",
+      "exclude": "범용 소프트웨어; 배전장비 주력"
+    },
+    {
+      "id": "I0088",
+      "name": "로봇 핵심부품",
+      "level": "minor",
+      "parent_id": "G023",
+      "definition": "로봇 구동·인지용 특화 부품 공급",
+      "include": "감속기; 로봇 액추에이터; 그리퍼",
+      "exclude": "범용 베어링·모터 주력"
+    },
+    {
+      "id": "G024",
+      "name": "전력·에너지 설비",
+      "level": "middle",
+      "parent_id": "S06"
+    },
+    {
+      "id": "I0089",
+      "name": "송배전·전력기기",
+      "level": "minor",
+      "parent_id": "G024",
+      "definition": "전력 변환·전송·배전용 기기 공급",
+      "include": "변압기; 차단기; 배전반; 전력변환",
+      "exclude": "발전 운영; 배터리 셀"
+    },
+    {
+      "id": "I0090",
+      "name": "전선·전력 케이블",
+      "level": "minor",
+      "parent_id": "G024",
+      "definition": "전력망용 전선·케이블과 접속재 제조",
+      "include": "초고압·해저 케이블; 전력선",
+      "exclude": "전자기기 내부 커넥터"
+    },
+    {
+      "id": "I0091",
+      "name": "발전·터빈·원전 설비",
+      "level": "minor",
+      "parent_id": "G024",
+      "definition": "발전소용 주기기·모듈 및 핵심 부품 공급",
+      "include": "가스터빈; 원전 주기기; 발전 보일러",
+      "exclude": "발전소 소유·운영; 건설 EPC만"
+    },
+    {
+      "id": "I0092",
+      "name": "환경·수처리 설비",
+      "level": "minor",
+      "parent_id": "G024",
+      "definition": "오염 저감·수처리·자원처리용 장비",
+      "include": "여과; 담수화; 대기저감; 처리 설비",
+      "exclude": "상수도 운영; 폐기물 수거"
+    },
+    {
+      "id": "G025",
+      "name": "항공우주·방산·조선",
+      "level": "middle",
+      "parent_id": "S06"
+    },
+    {
+      "id": "I0093",
+      "name": "방산 체계·장비",
+      "level": "minor",
+      "parent_id": "G025",
+      "definition": "군용 무기체계·전자장비의 개발·제조",
+      "include": "지상무기; 미사일; 군용 전자; 군용 드론",
+      "exclude": "민항 주력; 방산 테마만 있는 범용 부품"
+    },
+    {
+      "id": "I0094",
+      "name": "민항기·항공 부품",
+      "level": "minor",
+      "parent_id": "G025",
+      "definition": "민간 항공기·엔진·항공 부품과 정비",
+      "include": "민항 OEM; 항공엔진; 항공 MRO",
+      "exclude": "여객운송; 방산 주력"
+    },
+    {
+      "id": "I0095",
+      "name": "우주 발사·위성 제조",
+      "level": "minor",
+      "parent_id": "G025",
+      "definition": "우주 운송체·위성 및 관련 장비 제작",
+      "include": "발사 서비스; 위성 제조; 우주 하드웨어",
+      "exclude": "위성통신 서비스; 일반 군수"
+    },
+    {
+      "id": "I0096",
+      "name": "조선·선박 기자재",
+      "level": "minor",
+      "parent_id": "G025",
+      "definition": "선박·해양구조물과 전용 기자재 제작",
+      "include": "상선·특수선; 선박엔진; 해양플랜트",
+      "exclude": "해운 운항; 범용 기계"
+    },
+    {
+      "id": "S07",
+      "name": "운송·물류",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G026",
+      "name": "육상 운송",
+      "level": "middle",
+      "parent_id": "S07"
+    },
+    {
+      "id": "I0097",
+      "name": "철도 운송",
+      "level": "minor",
+      "parent_id": "G026",
+      "definition": "철도망을 통한 화물·여객 운송",
+      "include": "철도 화물; 철도 여객",
+      "exclude": "철도차량 제조; 시설공사"
+    },
+    {
+      "id": "I0098",
+      "name": "육상 화물 운송",
+      "level": "minor",
+      "parent_id": "G026",
+      "definition": "도로 기반 화물 운송 사업",
+      "include": "트럭운송; LTL; 육상 화물",
+      "exclude": "택배 통합사업; 단순 중개"
+    },
+    {
+      "id": "I0099",
+      "name": "여객 이동·차량 임대",
+      "level": "minor",
+      "parent_id": "G026",
+      "definition": "지상 여객 이동과 차량 대여 서비스",
+      "include": "버스; 택시; 호출 플랫폼; 렌터카",
+      "exclude": "완성차 판매; 철도 운송"
+    },
+    {
+      "id": "G027",
+      "name": "항공·해운",
+      "level": "middle",
+      "parent_id": "S07"
+    },
+    {
+      "id": "I0100",
+      "name": "여객 항공",
+      "level": "minor",
+      "parent_id": "G027",
+      "definition": "여객 수송 중심의 항공사",
+      "include": "대형항공; 저비용항공; 부수 항공화물",
+      "exclude": "항공기 제조; 특송 주력"
+    },
+    {
+      "id": "I0101",
+      "name": "해상 화물 운송",
+      "level": "minor",
+      "parent_id": "G027",
+      "definition": "선박으로 상품·원자재를 운송",
+      "include": "컨테이너; 벌크; 탱커; LNG 운반",
+      "exclude": "선박 건조; 항만 운영"
+    },
+    {
+      "id": "I0102",
+      "name": "운송 인프라 운영",
+      "level": "minor",
+      "parent_id": "G027",
+      "definition": "교통시설 이용료와 운영 수익",
+      "include": "항만; 공항; 유료도로; 철도 인프라",
+      "exclude": "시설 시공; 일반 부동산 임대"
+    },
+    {
+      "id": "G028",
+      "name": "종합 물류",
+      "level": "middle",
+      "parent_id": "S07"
+    },
+    {
+      "id": "I0103",
+      "name": "택배·특송",
+      "level": "minor",
+      "parent_id": "G028",
+      "definition": "정형 소화물의 수거·분류·배송 통합 서비스",
+      "include": "택배; 국제특송; 항공 특송",
+      "exclude": "일반 트럭운송; 전자상거래 주력"
+    },
+    {
+      "id": "I0104",
+      "name": "포워딩·물류 중개",
+      "level": "minor",
+      "parent_id": "G028",
+      "definition": "운송 수단을 결합하거나 중개하는 물류 서비스",
+      "include": "포워더; 화물 중개; 통관",
+      "exclude": "운송 중개·포워딩 없이 선박·항공 운항만 수행하는 활동"
+    },
+    {
+      "id": "I0105",
+      "name": "계약 물류·창고 운영",
+      "level": "minor",
+      "parent_id": "G028",
+      "definition": "고객 재고·창고·유통 공정의 운영 대행",
+      "include": "3PL; 창고 운영; 공급망 운영",
+      "exclude": "창고 건물 임대만"
+    },
+    {
+      "id": "S08",
+      "name": "자동차·이차전지",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G029",
+      "name": "완성차",
+      "level": "middle",
+      "parent_id": "S08"
+    },
+    {
+      "id": "I0106",
+      "name": "종합 승용차",
+      "level": "minor",
+      "parent_id": "G029",
+      "definition": "다수 동력계를 포함한 승용차 제조·판매",
+      "include": "내연기관·하이브리드·전기차 혼합",
+      "exclude": "전기차 중심 전문기업; 딜러"
+    },
+    {
+      "id": "I0107",
+      "name": "전기차 중심 완성차",
+      "level": "minor",
+      "parent_id": "G029",
+      "definition": "전기차가 주력인 완성차 사업",
+      "include": "전기 승용차; EV 중심 제조사",
+      "exclude": "배터리 제조만; 충전사업"
+    },
+    {
+      "id": "I0108",
+      "name": "상용차·이륜차",
+      "level": "minor",
+      "parent_id": "G029",
+      "definition": "상업 운송 차량 및 이륜차 제조",
+      "include": "트럭; 버스; 이륜차; 특장차",
+      "exclude": "굴착기; 승용차 중심"
+    },
+    {
+      "id": "G030",
+      "name": "자동차 부품",
+      "level": "middle",
+      "parent_id": "S08"
+    },
+    {
+      "id": "I0109",
+      "name": "자동차 시스템·부품",
+      "level": "minor",
+      "parent_id": "G030",
+      "definition": "완성차에 공급하는 기계·전자 시스템",
+      "include": "구동·제동·차체; 차량용 전장; ADAS 모듈",
+      "exclude": "반도체 칩 단품; 범용 전자"
+    },
+    {
+      "id": "I0110",
+      "name": "타이어·자동차 고무",
+      "level": "minor",
+      "parent_id": "G030",
+      "definition": "차량 타이어 및 전용 고무 부품",
+      "include": "타이어; 타이어 관련 제품",
+      "exclude": "범용 고무 원료"
+    },
+    {
+      "id": "I0111",
+      "name": "충전 인프라·운영",
+      "level": "minor",
+      "parent_id": "G030",
+      "definition": "전기차 충전 장비·네트워크·운영 서비스",
+      "include": "충전기; 충전망; 충전 관리",
+      "exclude": "전력망 변압기; 배터리 셀"
+    },
+    {
+      "id": "G031",
+      "name": "배터리 제품",
+      "level": "middle",
+      "parent_id": "S08"
+    },
+    {
+      "id": "I0112",
+      "name": "이차전지 셀",
+      "level": "minor",
+      "parent_id": "G031",
+      "definition": "충방전 가능한 전지의 셀 제조",
+      "include": "리튬이온; 비리튬 셀; EV·소형 셀",
+      "exclude": "원재료 채굴; 팩 조립만"
+    },
+    {
+      "id": "I0113",
+      "name": "배터리 팩·ESS 통합",
+      "level": "minor",
+      "parent_id": "G031",
+      "definition": "셀을 통합해 팩·저장장치 시스템 공급",
+      "include": "팩; BMS 통합; ESS 시스템",
+      "exclude": "팩·저장 시스템 통합 없이 셀만 제조하는 활동; 저장 시스템 공급 없이 발전자산만 운영하는 활동"
+    },
+    {
+      "id": "I0114",
+      "name": "차세대 배터리 개발",
+      "level": "minor",
+      "parent_id": "G031",
+      "definition": "상업 양산 전후의 차세대 전지 핵심기술 개발",
+      "include": "전고체; 신형 전극·셀 플랫폼",
+      "exclude": "기존 소재 단순 공급; 셀 양산 주력"
+    },
+    {
+      "id": "G032",
+      "name": "배터리 소재·장비",
+      "level": "middle",
+      "parent_id": "S08"
+    },
+    {
+      "id": "I0115",
+      "name": "배터리 활성·기능 소재",
+      "level": "minor",
+      "parent_id": "G032",
+      "definition": "이차전지용 전극·전해질·분리막 소재",
+      "include": "양극재; 음극재; 전해액; 분리막",
+      "exclude": "리튬 채굴; 범용 화학 주력"
+    },
+    {
+      "id": "I0116",
+      "name": "배터리 제조 장비",
+      "level": "minor",
+      "parent_id": "G032",
+      "definition": "전극·셀·팩 제조·검사용 전용 설비",
+      "include": "코팅; 조립; 활성화; 검사",
+      "exclude": "일반 공장 자동화; 셀 제조"
+    },
+    {
+      "id": "I0117",
+      "name": "배터리 재활용",
+      "level": "minor",
+      "parent_id": "G032",
+      "definition": "폐전지·스크랩에서 자원을 회수",
+      "include": "전처리; 습식·건식 회수; 재활용 서비스",
+      "exclude": "일반 금속 제련 주력; 단순 수거"
+    },
+    {
+      "id": "S09",
+      "name": "에너지·유틸리티",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G033",
+      "name": "석유·가스",
+      "level": "middle",
+      "parent_id": "S09"
+    },
+    {
+      "id": "I0118",
+      "name": "통합 석유·가스",
+      "level": "minor",
+      "parent_id": "G033",
+      "definition": "탐사·생산·정제 등의 수직 통합 에너지 사업",
+      "include": "국제 석유회사; 통합 에너지",
+      "exclude": "정제만; 탐사생산만"
+    },
+    {
+      "id": "I0119",
+      "name": "석유·가스 탐사생산",
+      "level": "minor",
+      "parent_id": "G033",
+      "definition": "탄화수소 매장량을 개발·생산",
+      "include": "원유·가스 E&P",
+      "exclude": "석탄; 유전 용역; 정제"
+    },
+    {
+      "id": "I0120",
+      "name": "정유·연료 유통",
+      "level": "minor",
+      "parent_id": "G033",
+      "definition": "원유 정제와 연료 판매 중심",
+      "include": "정제; 정유제품 유통; 주유",
+      "exclude": "석유화학 중심; 통합 석유"
+    },
+    {
+      "id": "I0121",
+      "name": "에너지 저장·운송",
+      "level": "minor",
+      "parent_id": "G033",
+      "definition": "파이프라인·저장·액화 등 에너지 물류",
+      "include": "파이프라인; 저장; LNG 액화·터미널",
+      "exclude": "LNG 선박 운송; 도시가스 배급"
+    },
+    {
+      "id": "G034",
+      "name": "에너지 자원·서비스",
+      "level": "middle",
+      "parent_id": "S09"
+    },
+    {
+      "id": "I0122",
+      "name": "유전 장비·서비스",
+      "level": "minor",
+      "parent_id": "G034",
+      "definition": "석유·가스 개발 장비·기술·시추 용역",
+      "include": "시추; 유전 서비스; 해양 시추",
+      "exclude": "자원 생산사; 범용 기계"
+    },
+    {
+      "id": "I0123",
+      "name": "석탄·연료 자원",
+      "level": "minor",
+      "parent_id": "G034",
+      "definition": "석탄 등 고체 연료를 채굴·판매",
+      "include": "연료탄; 원료탄",
+      "exclude": "철강 제련; 원유 생산"
+    },
+    {
+      "id": "I0124",
+      "name": "우라늄·핵연료",
+      "level": "minor",
+      "parent_id": "G034",
+      "definition": "핵연료 자원의 생산·처리",
+      "include": "우라늄 채굴; 농축; 핵연료 공급",
+      "exclude": "원전 발전; 원전 기기"
+    },
+    {
+      "id": "G035",
+      "name": "재생에너지 기술",
+      "level": "middle",
+      "parent_id": "S09"
+    },
+    {
+      "id": "I0125",
+      "name": "태양광 제조·부품",
+      "level": "minor",
+      "parent_id": "G035",
+      "definition": "태양광 발전용 핵심 제품 제조",
+      "include": "폴리실리콘; 셀; 모듈; 인버터",
+      "exclude": "태양광 발전 운영; 설치공사만"
+    },
+    {
+      "id": "I0126",
+      "name": "풍력 장비·부품",
+      "level": "minor",
+      "parent_id": "G035",
+      "definition": "풍력 발전기와 전용 부품 제작",
+      "include": "터빈; 타워; 블레이드; 전용 단조품",
+      "exclude": "발전단지 운영; 범용 베어링"
+    },
+    {
+      "id": "I0127",
+      "name": "수소·연료전지 설비",
+      "level": "minor",
+      "parent_id": "G035",
+      "definition": "수소 제조·사용 기술을 제품화",
+      "include": "수전해; 연료전지; 수소 전용 설비",
+      "exclude": "산업가스 종합기업; 범용 용기"
+    },
+    {
+      "id": "G036",
+      "name": "전력·가스·수도",
+      "level": "middle",
+      "parent_id": "S09"
+    },
+    {
+      "id": "I0128",
+      "name": "규제 전력·복합 유틸리티",
+      "level": "minor",
+      "parent_id": "G036",
+      "definition": "규제 요금 기반 전력 또는 복합 공공서비스",
+      "include": "송배전·통합전력; 복합유틸리티",
+      "exclude": "규제 전력망·전력 공급 사업 없이 경쟁 발전만 영위하는 활동; 발전장비 제조"
+    },
+    {
+      "id": "I0129",
+      "name": "독립·경쟁 발전",
+      "level": "minor",
+      "parent_id": "G036",
+      "definition": "시장가격·전력계약 기반 발전 사업",
+      "include": "원전·화력 독립발전; 전력 판매",
+      "exclude": "규제 전력망 중심; 신재생 전업"
+    },
+    {
+      "id": "I0130",
+      "name": "재생전력 운영",
+      "level": "minor",
+      "parent_id": "G036",
+      "definition": "재생 발전자산의 소유·개발·운영",
+      "include": "태양광·풍력·수력 발전",
+      "exclude": "장비 제조; 단순 EPC"
+    },
+    {
+      "id": "I0131",
+      "name": "가스 배급",
+      "level": "minor",
+      "parent_id": "G036",
+      "definition": "가스를 최종 사용자에게 배급",
+      "include": "도시가스; 규제 가스 유틸리티",
+      "exclude": "상류 생산; 장거리 파이프라인"
+    },
+    {
+      "id": "I0132",
+      "name": "수도·물 공급",
+      "level": "minor",
+      "parent_id": "G036",
+      "definition": "수도·하수 인프라의 운영과 물 판매",
+      "include": "상수도; 하수 유틸리티",
+      "exclude": "수처리 장비; 생수 제품"
+    },
+    {
+      "id": "S10",
+      "name": "소재·자원",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G037",
+      "name": "금속·광업",
+      "level": "middle",
+      "parent_id": "S10"
+    },
+    {
+      "id": "I0133",
+      "name": "철강",
+      "level": "minor",
+      "parent_id": "G037",
+      "definition": "철·강 소재의 제련·압연·판매",
+      "include": "고로·전기로; 특수강; 강관",
+      "exclude": "원료탄 전업; 철강 유통만"
+    },
+    {
+      "id": "I0134",
+      "name": "비철금속·제련",
+      "level": "minor",
+      "parent_id": "G037",
+      "definition": "비철 광물 채굴·제련·금속 소재",
+      "include": "구리; 알루미늄; 아연; 니켈",
+      "exclude": "귀금속 주력; 배터리 소재 가공"
+    },
+    {
+      "id": "I0135",
+      "name": "귀금속·로열티",
+      "level": "minor",
+      "parent_id": "G037",
+      "definition": "귀금속 생산과 광산 로열티 사업",
+      "include": "금·은·백금; 스트리밍·로열티",
+      "exclude": "실물 금 ETF; 보석 소매"
+    },
+    {
+      "id": "I0136",
+      "name": "리튬·배터리 광물",
+      "level": "minor",
+      "parent_id": "G037",
+      "definition": "배터리 원료 광물의 채굴·정제",
+      "include": "리튬; 흑연; 배터리 원료 중심 광업",
+      "exclude": "양극재; 광업 다각화 주력"
+    },
+    {
+      "id": "I0137",
+      "name": "복합 광업",
+      "level": "minor",
+      "parent_id": "G037",
+      "definition": "서로 다른 자원 채굴에 걸친 복합사업",
+      "include": "다광종 채굴기업",
+      "exclude": "단일 금속·석탄 주력"
+    },
+    {
+      "id": "G038",
+      "name": "화학",
+      "level": "middle",
+      "parent_id": "S10"
+    },
+    {
+      "id": "I0138",
+      "name": "기초·석유화학",
+      "level": "minor",
+      "parent_id": "G038",
+      "definition": "범용 화학 원료·수지 대량 제조",
+      "include": "기초유분; 합성수지; 범용 화학",
+      "exclude": "정제 연료 주력; 특수화학"
+    },
+    {
+      "id": "I0139",
+      "name": "특수·기능 화학",
+      "level": "minor",
+      "parent_id": "G038",
+      "definition": "특정 성능·용도 기반 화학제품",
+      "include": "첨가제; 접착제; 코팅; 기능성 소재",
+      "exclude": "반도체·배터리 전용 소재 주력"
+    },
+    {
+      "id": "I0140",
+      "name": "산업 가스",
+      "level": "minor",
+      "parent_id": "G038",
+      "definition": "산업·의료용 가스 생산·공급",
+      "include": "산소; 질소; 수소 종합 공급",
+      "exclude": "반도체 특수가스 전업; 도시가스"
+    },
+    {
+      "id": "I0141",
+      "name": "비료·농업 화학",
+      "level": "minor",
+      "parent_id": "G038",
+      "definition": "농업 생산성 향상을 위한 투입재",
+      "include": "비료; 작물보호; 농업 화학",
+      "exclude": "농기계; 종자만"
+    },
+    {
+      "id": "G039",
+      "name": "포장·제지·목재",
+      "level": "middle",
+      "parent_id": "S10"
+    },
+    {
+      "id": "I0142",
+      "name": "포장재·용기",
+      "level": "minor",
+      "parent_id": "G039",
+      "definition": "제품 포장용 소재·용기 제조",
+      "include": "종이·플라스틱·금속·유리 포장",
+      "exclude": "범용 수지; 소비자 제품"
+    },
+    {
+      "id": "I0143",
+      "name": "제지·펄프",
+      "level": "minor",
+      "parent_id": "G039",
+      "definition": "펄프와 비포장 종이 제조",
+      "include": "펄프; 인쇄용지; 특수지",
+      "exclude": "상자·포장 주력; 인쇄 서비스"
+    },
+    {
+      "id": "I0144",
+      "name": "목재·산림 제품",
+      "level": "minor",
+      "parent_id": "G039",
+      "definition": "산림 경영과 목재 소재 생산",
+      "include": "목재; 목재 패널; 산림 생산",
+      "exclude": "산림 REIT 임대·자산 보유"
+    },
+    {
+      "id": "G040",
+      "name": "건자재·기능 소재",
+      "level": "middle",
+      "parent_id": "S10"
+    },
+    {
+      "id": "I0145",
+      "name": "시멘트·골재",
+      "level": "minor",
+      "parent_id": "G040",
+      "definition": "광물 기반 구조 건설재료 제조",
+      "include": "시멘트; 레미콘; 골재",
+      "exclude": "건설 시공; 인테리어 제품"
+    },
+    {
+      "id": "I0146",
+      "name": "유리·세라믹·기능 소재",
+      "level": "minor",
+      "parent_id": "G040",
+      "definition": "산업용 무기·복합 소재 공급",
+      "include": "유리; 세라믹; 복합재; 탄소섬유",
+      "exclude": "디스플레이·반도체 전용 주력"
+    },
+    {
+      "id": "I0147",
+      "name": "소재 가공·전문 유통",
+      "level": "minor",
+      "parent_id": "G040",
+      "definition": "원소재의 유통·가공 서비스",
+      "include": "금속 유통; 절단·서비스센터",
+      "exclude": "제련·원소재 자체 제조"
+    },
+    {
+      "id": "S11",
+      "name": "소비재·유통",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G041",
+      "name": "소비자 유통",
+      "level": "middle",
+      "parent_id": "S11"
+    },
+    {
+      "id": "I0148",
+      "name": "전자상거래·상품 중개",
+      "level": "minor",
+      "parent_id": "G041",
+      "definition": "상품 거래와 이행·중개가 중심인 온라인 유통",
+      "include": "온라인 직매입; 상품 마켓플레이스",
+      "exclude": "여행예약; 광고 중심 포털"
+    },
+    {
+      "id": "I0149",
+      "name": "종합·생활 유통",
+      "level": "minor",
+      "parent_id": "G041",
+      "definition": "다양한 소비재를 오프라인·온라인 결합 판매",
+      "include": "대형마트; 창고형; 백화점; 종합 소매",
+      "exclude": "단일 전문품목 주력"
+    },
+    {
+      "id": "I0150",
+      "name": "전문 소매",
+      "level": "minor",
+      "parent_id": "G041",
+      "definition": "특정 소비재 품목에 집중한 소매",
+      "include": "의류·전자·가구·주택개선 소매; 약국 소매",
+      "exclude": "자동차 소매; 제조 브랜드 중심"
+    },
+    {
+      "id": "I0151",
+      "name": "자동차 유통·정비",
+      "level": "minor",
+      "parent_id": "G041",
+      "definition": "차량 판매와 부품 소매·정비 서비스",
+      "include": "신차·중고차 딜러; 정비체인; 부품 소매",
+      "exclude": "완성차·부품 제조; 렌터카"
+    },
+    {
+      "id": "G042",
+      "name": "브랜드·패션",
+      "level": "middle",
+      "parent_id": "S11"
+    },
+    {
+      "id": "I0152",
+      "name": "의류·신발·잡화 브랜드",
+      "level": "minor",
+      "parent_id": "G042",
+      "definition": "상표·디자인 기반 패션 제품 판매",
+      "include": "의류; 신발; 스포츠웨어; 잡화",
+      "exclude": "단순 봉제 OEM; 전문 소매"
+    },
+    {
+      "id": "I0153",
+      "name": "의류·섬유 OEM",
+      "level": "minor",
+      "parent_id": "G042",
+      "definition": "고객 브랜드용 의류·신발·섬유 제품 제조",
+      "include": "봉제 OEM; 신발 OEM; 의류용 섬유",
+      "exclude": "자체 브랜드 주력; 산업용 섬유"
+    },
+    {
+      "id": "I0154",
+      "name": "럭셔리·보석",
+      "level": "minor",
+      "parent_id": "G042",
+      "definition": "고가 브랜드·희소성 기반 소비재",
+      "include": "명품; 주얼리; 고급 시계",
+      "exclude": "원재료 귀금속 채굴"
+    },
+    {
+      "id": "I0155",
+      "name": "취미·레저 제품",
+      "level": "minor",
+      "parent_id": "G042",
+      "definition": "여가 활동용 소비재 제조·브랜드",
+      "include": "완구; 스포츠용품; 악기; 보트·RV",
+      "exclude": "게임 소프트웨어; 레저시설 운영"
+    },
+    {
+      "id": "G043",
+      "name": "가전·가구·생활 내구재",
+      "level": "middle",
+      "parent_id": "S11"
+    },
+    {
+      "id": "I0156",
+      "name": "가전·생활 전자",
+      "level": "minor",
+      "parent_id": "G043",
+      "definition": "가정 생활용 완제품 기기",
+      "include": "백색가전; TV; 주방가전",
+      "exclude": "스마트폰·PC; 산업 HVAC"
+    },
+    {
+      "id": "I0157",
+      "name": "가구·생활 내구재",
+      "level": "minor",
+      "parent_id": "G043",
+      "definition": "생활공간용 가구·내구 소비재",
+      "include": "가구; 침구; 주방·생활용품",
+      "exclude": "건축 구조재; 소매만"
+    },
+    {
+      "id": "I0158",
+      "name": "건축·인테리어 제품",
+      "level": "minor",
+      "parent_id": "G043",
+      "definition": "건물에 설치하는 비구조적 제품",
+      "include": "창호; 바닥재; 욕실; 조명; 인테리어재",
+      "exclude": "시멘트·골재; 완성가구"
+    },
+    {
+      "id": "G044",
+      "name": "여행·외식·레저 서비스",
+      "level": "middle",
+      "parent_id": "S11"
+    },
+    {
+      "id": "I0159",
+      "name": "외식·프랜차이즈",
+      "level": "minor",
+      "parent_id": "G044",
+      "definition": "식사·음료를 매장·배달로 제공",
+      "include": "외식 체인; 카페; 프랜차이즈",
+      "exclude": "식품 제조; 배달 중개 전업"
+    },
+    {
+      "id": "I0160",
+      "name": "호텔·숙박·크루즈",
+      "level": "minor",
+      "parent_id": "G044",
+      "definition": "숙박·리조트·크루즈 운영",
+      "include": "호텔 운영·브랜드; 숙박; 크루즈",
+      "exclude": "호텔 건물 임대 REIT; 항공사"
+    },
+    {
+      "id": "I0161",
+      "name": "여행예약·배달 중개",
+      "level": "minor",
+      "parent_id": "G044",
+      "definition": "여행·음식 주문 등 소비 서비스 중개",
+      "include": "OTA; 여행사; 음식배달 플랫폼",
+      "exclude": "직접 호텔·식당 운영 주력"
+    },
+    {
+      "id": "I0162",
+      "name": "카지노·스포츠·여가시설",
+      "level": "minor",
+      "parent_id": "G044",
+      "definition": "시설·이벤트 기반 여가 서비스",
+      "include": "카지노; 스포츠베팅; 테마파크; 피트니스",
+      "exclude": "게임 소프트웨어; 음악공연 주력"
+    },
+    {
+      "id": "S12",
+      "name": "생활필수품·농업",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G045",
+      "name": "식품·음료",
+      "level": "middle",
+      "parent_id": "S12"
+    },
+    {
+      "id": "I0163",
+      "name": "가공식품",
+      "level": "minor",
+      "parent_id": "G045",
+      "definition": "포장·가공 식품의 제조와 브랜드 판매",
+      "include": "면류; 제과; 냉동식품; 유제품",
+      "exclude": "원료 농산물 거래; 음식점"
+    },
+    {
+      "id": "I0164",
+      "name": "축산·수산·단백질",
+      "level": "minor",
+      "parent_id": "G045",
+      "definition": "동물성 식품의 생산·가공",
+      "include": "육류; 양계; 양식; 수산",
+      "exclude": "반려동물 제품; 순수 사료"
+    },
+    {
+      "id": "I0165",
+      "name": "음료",
+      "level": "minor",
+      "parent_id": "G045",
+      "definition": "비알코올 음료 제조·브랜드",
+      "include": "탄산; 커피·차 음료; 생수",
+      "exclude": "카페 운영; 주류"
+    },
+    {
+      "id": "I0166",
+      "name": "주류·담배",
+      "level": "minor",
+      "parent_id": "G045",
+      "definition": "주류·담배 및 관련 브랜드 제품",
+      "include": "맥주; 증류주; 담배",
+      "exclude": "일반 음료; 소매만"
+    },
+    {
+      "id": "G046",
+      "name": "생활·개인용품",
+      "level": "middle",
+      "parent_id": "S12"
+    },
+    {
+      "id": "I0167",
+      "name": "생활·위생용품",
+      "level": "minor",
+      "parent_id": "G046",
+      "definition": "가정 청소·위생용 반복구매 제품",
+      "include": "세제; 기저귀; 위생지; 생활용품",
+      "exclude": "의료용 소모품; 가구"
+    },
+    {
+      "id": "I0168",
+      "name": "화장품·개인관리",
+      "level": "minor",
+      "parent_id": "G046",
+      "definition": "미용·개인관리 제품의 브랜드 판매",
+      "include": "화장품; 피부관리; 헤어케어",
+      "exclude": "화장품 OEM 중심; 의료미용기기"
+    },
+    {
+      "id": "I0169",
+      "name": "화장품 ODM·OEM",
+      "level": "minor",
+      "parent_id": "G046",
+      "definition": "타사 브랜드용 화장품 개발·생산",
+      "include": "화장품 ODM; OEM; 전용 용기 통합",
+      "exclude": "자체 브랜드 주력; 일반 포장"
+    },
+    {
+      "id": "I0170",
+      "name": "반려동물 제품·서비스",
+      "level": "minor",
+      "parent_id": "G046",
+      "definition": "반려동물 소비를 대상으로 한 제품·비의료 서비스",
+      "include": "펫푸드; 펫용품; 미용·돌봄",
+      "exclude": "동물의약품; 동물병원"
+    },
+    {
+      "id": "G047",
+      "name": "농업·식품 공급망",
+      "level": "middle",
+      "parent_id": "S12"
+    },
+    {
+      "id": "I0171",
+      "name": "농산물 생산·거래·가공",
+      "level": "minor",
+      "parent_id": "G047",
+      "definition": "농산물 원료의 생산·집하·1차 가공",
+      "include": "곡물거래; 종자 포함 복합 농업; 유지 가공",
+      "exclude": "브랜드 식품 주력; 비료"
+    },
+    {
+      "id": "I0172",
+      "name": "종자·사료·농업 투입",
+      "level": "minor",
+      "parent_id": "G047",
+      "definition": "생물학적·영양적 농업 투입재",
+      "include": "종자; 사료; 농업 영양",
+      "exclude": "작물보호 화학; 농기계"
+    },
+    {
+      "id": "I0173",
+      "name": "식품 도매·급식",
+      "level": "minor",
+      "parent_id": "G047",
+      "definition": "식품 공급망 유통과 단체 식사 서비스",
+      "include": "식자재 유통; 급식; 식품 도매",
+      "exclude": "일반 음식점; 농산물 거래"
+    },
+    {
+      "id": "S13",
+      "name": "부동산·건설",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G048",
+      "name": "부동산 임대·REIT",
+      "level": "middle",
+      "parent_id": "S13"
+    },
+    {
+      "id": "I0174",
+      "name": "주거 임대 부동산",
+      "level": "minor",
+      "parent_id": "G048",
+      "definition": "주택 임대자산의 소유·운영",
+      "include": "주거 REIT; 임대주택",
+      "exclude": "주택 분양·개발; 모기지 REIT"
+    },
+    {
+      "id": "I0175",
+      "name": "오피스 임대 부동산",
+      "level": "minor",
+      "parent_id": "G048",
+      "definition": "사무용 자산의 소유·운영",
+      "include": "오피스 REIT; 오피스 임대",
+      "exclude": "부동산 관리 용역만"
+    },
+    {
+      "id": "I0176",
+      "name": "상업·숙박 임대 부동산",
+      "level": "minor",
+      "parent_id": "G048",
+      "definition": "소매·호텔 자산을 보유하고 임대수익 수취",
+      "include": "리테일·호텔 REIT; 쇼핑센터 임대",
+      "exclude": "직접 호텔 영업이 주력인 기업"
+    },
+    {
+      "id": "I0177",
+      "name": "물류·산업 부동산",
+      "level": "minor",
+      "parent_id": "G048",
+      "definition": "물류·산업용 자산의 임대 사업",
+      "include": "물류 REIT; 산업시설 임대",
+      "exclude": "창고 운영 대행"
+    },
+    {
+      "id": "G049",
+      "name": "특수 부동산",
+      "level": "middle",
+      "parent_id": "S13"
+    },
+    {
+      "id": "I0178",
+      "name": "데이터센터 부동산·코로케이션",
+      "level": "minor",
+      "parent_id": "G049",
+      "definition": "데이터센터 공간·전력 인프라 제공",
+      "include": "데이터센터 REIT; 코로케이션",
+      "exclude": "계산자원 사용료인 IaaS; 서버 제조"
+    },
+    {
+      "id": "I0179",
+      "name": "통신 타워 부동산",
+      "level": "minor",
+      "parent_id": "G049",
+      "definition": "통신 장비 설치 공간의 임대",
+      "include": "타워 REIT; 타워 운영사",
+      "exclude": "통신 회선; 통신장비 제조"
+    },
+    {
+      "id": "I0180",
+      "name": "특수·복합 부동산",
+      "level": "minor",
+      "parent_id": "G049",
+      "definition": "의료·저장·산림 등 특수 자산 또는 복합 임대",
+      "include": "헬스케어·셀프스토리지·산림 REIT; 복합 REIT",
+      "exclude": "모기지 REIT; 자산 범위 불명"
+    },
+    {
+      "id": "G050",
+      "name": "건설·개발",
+      "level": "middle",
+      "parent_id": "S13"
+    },
+    {
+      "id": "I0181",
+      "name": "주택 건설·분양",
+      "level": "minor",
+      "parent_id": "G050",
+      "definition": "주거 부동산을 개발·건설해 판매",
+      "include": "주택 개발; 주택 시공·분양",
+      "exclude": "임대보유; 비주거 EPC 주력"
+    },
+    {
+      "id": "I0182",
+      "name": "종합 건설·EPC",
+      "level": "minor",
+      "parent_id": "G050",
+      "definition": "토목·비주거·산업 플랜트 건설 수행",
+      "include": "종합건설; 토목; 플랜트 EPC",
+      "exclude": "발전기기 제조; 주택 전업"
+    },
+    {
+      "id": "I0183",
+      "name": "전문 공사·설치",
+      "level": "minor",
+      "parent_id": "G050",
+      "definition": "특정 공종의 시공·설치 서비스",
+      "include": "전기공사; 기계설비; 통신공사; 보수",
+      "exclude": "장비 제조; 종합 EPC"
+    },
+    {
+      "id": "G051",
+      "name": "부동산 서비스",
+      "level": "middle",
+      "parent_id": "S13"
+    },
+    {
+      "id": "I0184",
+      "name": "부동산 중개·자문·관리",
+      "level": "minor",
+      "parent_id": "G051",
+      "definition": "부동산 거래·자산·시설 관리 용역",
+      "include": "중개; 감정; 자문; 건물관리",
+      "exclude": "자산 소유 임대; 건설 시공"
+    },
+    {
+      "id": "I0185",
+      "name": "비주거 개발·복합 부동산 활동",
+      "level": "minor",
+      "parent_id": "G051",
+      "definition": "비주거 자산의 개발·매각 중심 사업",
+      "include": "상업 개발; 복합 개발; 비주거 개발사",
+      "exclude": "보유임대가 핵심인 기업"
+    },
+    {
+      "id": "I0186",
+      "name": "상장 인프라 투자기구",
+      "level": "minor",
+      "parent_id": "G051",
+      "definition": "인프라 지분·대출자산을 보유하는 상장 투자기구",
+      "include": "도로·에너지 인프라 투자회사·펀드형 차량",
+      "exclude": "직접 운영기업; ETF·일반 폐쇄형 펀드"
+    },
+    {
+      "id": "S14",
+      "name": "전문서비스·복합기업",
+      "level": "major",
+      "parent_id": ""
+    },
+    {
+      "id": "G052",
+      "name": "전문·사업지원 서비스",
+      "level": "middle",
+      "parent_id": "S14"
+    },
+    {
+      "id": "I0187",
+      "name": "인력·고용 서비스",
+      "level": "minor",
+      "parent_id": "G052",
+      "definition": "채용·파견·급여관리 인적 서비스",
+      "include": "채용; 인력파견; 고용지원",
+      "exclude": "제품형 HR 소프트웨어"
+    },
+    {
+      "id": "I0188",
+      "name": "컨설팅·시험·인증",
+      "level": "minor",
+      "parent_id": "G052",
+      "definition": "전문 지식·시험·검증 용역",
+      "include": "경영컨설팅; 검사·인증; 비임상 일반시험",
+      "exclude": "IT 컨설팅; 의약 CRO"
+    },
+    {
+      "id": "I0189",
+      "name": "업무 아웃소싱·지원",
+      "level": "minor",
+      "parent_id": "G052",
+      "definition": "기업 비핵심 사무·거래 업무의 대행",
+      "include": "콜센터; 문서; 사무지원; 상업인쇄",
+      "exclude": "결제 인프라; IT 운영"
+    },
+    {
+      "id": "I0190",
+      "name": "물리 보안·경비",
+      "level": "minor",
+      "parent_id": "G052",
+      "definition": "물리 공간·자산의 보안 서비스",
+      "include": "경비; 출동; 경보; 현금수송",
+      "exclude": "사이버보안 제품"
+    },
+    {
+      "id": "G053",
+      "name": "환경·교육·생활 서비스",
+      "level": "middle",
+      "parent_id": "S14"
+    },
+    {
+      "id": "I0191",
+      "name": "폐기물·환경 서비스",
+      "level": "minor",
+      "parent_id": "G053",
+      "definition": "폐기물의 수거·처리·재활용 용역",
+      "include": "폐기물 수거; 소각; 매립; 환경복원",
+      "exclude": "배터리 자원회수 전업; 수처리 장비"
+    },
+    {
+      "id": "I0192",
+      "name": "교육 서비스",
+      "level": "minor",
+      "parent_id": "G053",
+      "definition": "학습·교육 프로그램을 직접 운영",
+      "include": "학교; 학원; 온라인 교육; 직업훈련",
+      "exclude": "학교용 소프트웨어 라이선스만"
+    },
+    {
+      "id": "I0193",
+      "name": "전문 생활 서비스",
+      "level": "minor",
+      "parent_id": "G053",
+      "definition": "소비자에게 전문 생활·돌봄 서비스를 제공",
+      "include": "장례; 보육; 생활지원; 개인 전문서비스",
+      "exclude": "병원; 호텔; 피트니스"
+    },
+    {
+      "id": "G054",
+      "name": "지주·복합사업",
+      "level": "middle",
+      "parent_id": "S14"
+    },
+    {
+      "id": "I0194",
+      "name": "복합 산업 지주",
+      "level": "minor",
+      "parent_id": "G054",
+      "definition": "상장·비상장 자회사 지분을 통합 관리하며 단일 산업이 우세하지 않음",
+      "include": "순수 산업지주; 다업종 투자지주",
+      "exclude": "은행·보험 등 주력업이 뚜렷한 지주"
+    },
+    {
+      "id": "I0195",
+      "name": "복합 사업회사",
+      "level": "minor",
+      "parent_id": "G054",
+      "definition": "서로 다른 산업의 직접 사업 중 단일 주력 판정이 불가능",
+      "include": "다각화 제조·서비스 복합기업",
+      "exclude": "사업 미확인; 단일업종 기업"
+    },
+    {
+      "id": "I0196",
+      "name": "종합상사·산업 유통",
+      "level": "minor",
+      "parent_id": "G054",
+      "definition": "여러 산업의 무역·유통·사업개발을 수행",
+      "include": "종합상사; 복합 산업 유통",
+      "exclude": "금속·IT 전문 유통; 단일 생산"
+    },
+    {
+      "id": "I0197",
+      "name": "디지털자산 채굴",
+      "level": "minor",
+      "parent_id": "G054",
+      "definition": "계산 장비로 디지털자산을 채굴하는 사업",
+      "include": "직접 채굴; 채굴 인프라 운영",
+      "exclude": "거래소; 코인 보유만; 일반 데이터센터"
+    },
+    {
+      "id": "I0198",
+      "name": "단일자산 보유·재무전략 회사",
+      "level": "minor",
+      "parent_id": "G054",
+      "definition": "영업보다 특정 투자자산 보유가 핵심인 회사",
+      "include": "디지털자산·기타 단일자산 보유 중심 회사",
+      "exclude": "ETF; SPAC; 실질 영업 우세 기업"
+    }
+  ]
+}
