@@ -41,7 +41,16 @@ def _save(base_dir: str, snapshots: list[dict]) -> None:
 
 
 def _aligned_rows(frame) -> list[dict]:
-    """DataFrame 에서 정배열 종목만 추출(symbol·name·market·country)."""
+    """정배열 종목 목록 추출(symbol·name·market·country).
+
+    run_screen 이 필터 전에 담아 둔 attrs['aligned_all'] 을 우선 사용한다(전체 정배열).
+    없으면(구버전/외부 호출) 필터 후 DataFrame 에서 aligned==True 로 폴백한다.
+    """
+    attr = getattr(frame, "attrs", {}).get("aligned_all") if frame is not None else None
+    if isinstance(attr, list):
+        return [{"symbol": str(x.get("symbol", "")), "name": str(x.get("name", "")),
+                 "market": str(x.get("market", "")), "country": str(x.get("country", ""))}
+                for x in attr]
     if frame is None or getattr(frame, "empty", True) or "aligned" not in frame:
         return []
     sub = frame[frame["aligned"] == True]  # noqa: E712 — pandas 불리언 마스킹

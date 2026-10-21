@@ -95,10 +95,18 @@ def run_screen(cfg: Config, asof_date=None) -> pd.DataFrame:
             "stale_count": stale, "markets": sorted(valid_markets)}
     if df.empty:  # All evaluated stocks were excluded by the liquidity filter.
         df.attrs["scan"] = scan
+        df.attrs["aligned_all"] = []
         return df
 
     # 시가총액 숫자화 (정렬/필터용). 없으면 NaN
     df["marketcap"] = pd.to_numeric(df["marketcap"], errors="coerce")
+
+    # 정배열 변화(/weekly/changes)용: 포함 기준 필터와 무관하게 '전체 정배열 종목'을 보존.
+    # (기본 any_high 모드는 신고가 종목만 남겨 정배열 일부가 누락되므로, 필터 전에 따로 담는다.)
+    aligned_all = [
+        {"symbol": r["symbol"], "name": r["name"], "market": r["market"], "country": r["country"]}
+        for _, r in df[df["aligned"] == True].iterrows()  # noqa: E712
+    ]
 
     # 4) 포함 기준 필터
     mode = cfg.include_mode
@@ -120,4 +128,5 @@ def run_screen(cfg: Config, asof_date=None) -> pd.DataFrame:
                         ascending=[False, False, False]).reset_index(drop=True)
     df = df.drop(columns=["_cap_sort"])
     df.attrs["scan"] = scan
+    df.attrs["aligned_all"] = aligned_all
     return df
