@@ -138,8 +138,10 @@ def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
                 with _backfill_lock:
                     _backfill_state.update(phase="scan", week=_wi, done=done, total=total,
                                            message=f"[{_wi}/{len(targets)}주차] {_iso} 기준 주가 수집 {done}/{total}종목")
-            # 첫 호출이 캐시를 채우고, 이후 호출은 같은 날 캐시를 재사용(다운로드 0).
-            df = run_screen(cfg, asof_date=asof, progress=on_progress)
+            # offline=True: 이미 받아 둔 주가 캐시를 그대로 사용(증분 갱신 생략).
+            # 과거(지난주) 기준 계산이라 최신 증분이 필요 없어, 캐시가 있으면 다운로드 0.
+            # 캐시가 아예 없는 종목만 최초 1회 받는다.
+            df = run_screen(cfg, asof_date=asof, progress=on_progress, offline=True)
             record(base_dir, df, iso)
             created.append(iso)
         with _backfill_lock:

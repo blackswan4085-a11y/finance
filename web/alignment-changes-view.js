@@ -103,7 +103,7 @@
     btn.disabled = true;
     message.classList.remove('error');
     message.style.display = 'block';
-    message.textContent = '과거 2주 기준으로 정배열을 재계산하는 중입니다. 저장된 주가 캐시가 없으면(처음 실행) 전체 종목을 받느라 수십 분 걸릴 수 있고, 한 번 받은 뒤에는 빨라집니다. 이 창을 열어 둔 채 기다려 주세요…';
+    message.textContent = '과거 2주 기준으로 정배열을 재계산하는 중입니다. 저장된 주가 캐시를 그대로 쓰므로 스크리너를 한 번이라도 돌렸다면 보통 금방 끝납니다. 캐시가 없는 종목만 받습니다. 이 창을 열어 둔 채 기다려 주세요…';
     try {
       const r = await fetch('/api/alignment-changes/backfill', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
