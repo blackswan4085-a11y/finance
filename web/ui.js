@@ -45,6 +45,7 @@
     const usCustoms = ['/us-customs', '/us-customs/'].includes(location.pathname);
     const jpCustoms = ['/jp-customs', '/jp-customs/'].includes(location.pathname);
     const watchlist = ['/watchlist', '/watchlist/'].includes(location.pathname);
+    const earningsCal = ['/earnings-calendar', '/earnings-calendar/'].includes(location.pathname);
     const anyCustoms = customs || usCustoms || jpCustoms;
     const weeklyPages = [['/weekly', '스크리너'], ['/weekly/recap', '시장 Recap'], ['/weekly/industries', '산업 분류'], ['/weekly/sector-etfs', 'ETF 설정']];
     const aliases = {'/recap':'/weekly/recap', '/recap.html':'/weekly/recap', '/industries':'/weekly/industries', '/sector-etfs':'/weekly/sector-etfs', '/sector-classifications':'/weekly/sector-etfs', '/weekly/sector-classifications':'/weekly/sector-etfs', '/weekly/':'/weekly'};
@@ -62,11 +63,11 @@
       }
     }
     nav.replaceChildren();
-    for (const [href, label, selected] of [['/', '실적 리포트', earnings], ['/weekly', '위클리', !earnings && !anyCustoms && !watchlist], ['/watchlist', '관심종목', watchlist], ['/customs', '수출입(한국)', customs], ['/us-customs', '수출입(미국)', usCustoms], ['/jp-customs', '수출입(일본)', jpCustoms]]) {
+    for (const [href, label, selected] of [['/', '실적 리포트', earnings], ['/weekly', '위클리', !earnings && !anyCustoms && !watchlist && !earningsCal], ['/watchlist', '관심종목', watchlist], ['/earnings-calendar', '실적 캘린더', earningsCal], ['/customs', '수출입(한국)', customs], ['/us-customs', '수출입(미국)', usCustoms], ['/jp-customs', '수출입(일본)', jpCustoms]]) {
       const link = document.createElement('a'); link.href = href; link.className = 'navbtn'; link.textContent = label;
       if (selected) link.setAttribute('aria-current', 'page'); nav.append(link);
     }
-    if (!earnings && !anyCustoms && !watchlist && !document.querySelector('.topbar-actions')) {
+    if (!earnings && !anyCustoms && !watchlist && !earningsCal && !document.querySelector('.topbar-actions')) {
       const subnav = document.createElement('nav'); subnav.className = 'weekly-subnav'; subnav.setAttribute('aria-label', '위클리 메뉴');
       const label = document.createElement('span'); label.className = 'section-label'; label.textContent = 'WEEKLY'; subnav.append(label);
       for (const [href, text] of weeklyPages) {

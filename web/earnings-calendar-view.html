@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>실적 캘린더 · Finance</title><link rel="stylesheet" href="/ui.css"><script src="/ui.js"></script><script src="/earnings-calendar-view.js" defer></script></head>
+<body class="finance-settings finance-earnings-cal">
+<header class="finance-header"><div class="finance-brand"><span class="brand-mark" aria-hidden="true">▥</span><h1>실적 캘린더</h1></div><div class="header-actions"><nav class="finance-nav" aria-label="화면 이동"></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="테마 변경">☾</button></div></header>
+<main class="earnings-cal-workspace">
+  <section class="card">
+    <div class="earnings-cal-controls">
+      <label>시작일<input id="fromDate" type="date"></label>
+      <label>기간<select id="days"><option value="7">7일</option><option value="14">14일</option><option value="30">30일</option><option value="1">1일</option></select></label>
+      <label class="chk"><input id="onlyWatch" type="checkbox"> 관심종목만</label>
+      <button id="refreshBtn" class="update-button" type="button">데이터 업데이트</button>
+    </div>
+    <p class="muted">미국 실적 발표 예정(나스닥 제공). [데이터 업데이트]로 선택 기간을 수집합니다. '관심종목만'은 /watchlist에 등록한 미국 종목으로 거릅니다.</p>
+    <div id="message" class="update-status" role="status" aria-live="polite" style="display:none"></div>
+    <p id="meta" class="muted"></p>
+  </section>
+  <section class="card">
+    <div class="table-wrap">
+      <table class="earnings-cal-table">
+        <thead><tr><th>발표일</th><th>종목</th><th>이름</th><th>시점</th><th>EPS 전망</th><th>전년 EPS</th><th>시가총액</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="muted" style="display:none">표시할 실적 일정이 없습니다. [데이터 업데이트]를 눌러 수집하거나 기간을 조정해 보세요.</p>
+  </section>
+</main></body></html>

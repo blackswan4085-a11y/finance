@@ -29,6 +29,7 @@ __pycache__/
 # Personal classifications, review sources and editable settings.
 /sectors.json
 /watchlist.json
+/earnings_calendar_cache.json
 /sector_etfs.json
 /industry_overrides.json
 /instrument_exclusions.json
