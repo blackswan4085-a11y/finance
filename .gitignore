@@ -22,6 +22,8 @@ __pycache__/
 /recap_cache.json
 /screen_cache*.json
 /customs_workspace/
+/us_customs_workspace/
+/jp_customs_workspace/
 /earnings_workspace/
 
 # Personal classifications, review sources and editable settings.

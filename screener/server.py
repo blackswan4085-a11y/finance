@@ -33,6 +33,10 @@ from .earnings import EarningsService, EarningsConflict
 from .screen_cache import read_screen_cache, publish_screen_cache
 from .customs.service import CustomsService
 from .customs.report import page_html as customs_page_html
+from .us_customs.service import UsCustomsService
+from .us_customs.report import page_html as us_customs_page_html
+from .jp_customs.service import JpCustomsService
+from .jp_customs.report import page_html as jp_customs_page_html
 
 
 class FinanceHTTPServer(ThreadingHTTPServer):
@@ -85,6 +89,8 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
     rcfg = _build_recap_config(cfg)
     earnings = EarningsService(base_dir, cfg.earnings)
     customs = CustomsService(base_dir, cfg.customs)
+    us_customs = UsCustomsService(base_dir, cfg.us_customs)
+    jp_customs = JpCustomsService(base_dir, cfg.jp_customs)
     screen_cache_path = os.path.join(base_dir, "screen_cache.json")
     web_dir = os.path.join(base_dir, "web")
     chart_page_path = os.path.join(web_dir, "chart-view.html")
@@ -179,7 +185,21 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                 except (OSError, ValueError) as exc:
                     self._send(500, str(exc), "text/plain; charset=utf-8")
             elif route.startswith("/api/customs/"):
-                self._customs_request("GET", parsed)
+                self._trade_request(customs, "/api/customs/", "GET", parsed)
+            elif route in ("/us-customs", "/us-customs/"):
+                try:
+                    self._send(200, us_customs_page_html(us_customs.get("meta")))
+                except (OSError, ValueError) as exc:
+                    self._send(500, str(exc), "text/plain; charset=utf-8")
+            elif route.startswith("/api/us-customs/"):
+                self._trade_request(us_customs, "/api/us-customs/", "GET", parsed)
+            elif route in ("/jp-customs", "/jp-customs/"):
+                try:
+                    self._send(200, jp_customs_page_html(jp_customs.get("meta")))
+                except (OSError, ValueError) as exc:
+                    self._send(500, str(exc), "text/plain; charset=utf-8")
+            elif route.startswith("/api/jp-customs/"):
+                self._trade_request(jp_customs, "/api/jp-customs/", "GET", parsed)
             elif route in ("/", "/index.html", "/earnings", "/earnings-view.js", "/earnings.css"):
                 filename = "earnings-view.html" if route in ("/", "/index.html", "/earnings") else route.lstrip("/")
                 ctype = "text/javascript; charset=utf-8" if filename.endswith(".js") else "text/css; charset=utf-8" if filename.endswith(".css") else "text/html; charset=utf-8"
@@ -319,7 +339,13 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
         def do_POST(self):
             parsed = urlsplit(self.path)
             if parsed.path.startswith("/api/customs/"):
-                self._customs_request("POST", parsed)
+                self._trade_request(customs, "/api/customs/", "POST", parsed)
+                return
+            if parsed.path.startswith("/api/us-customs/"):
+                self._trade_request(us_customs, "/api/us-customs/", "POST", parsed)
+                return
+            if parsed.path.startswith("/api/jp-customs/"):
+                self._trade_request(jp_customs, "/api/jp-customs/", "POST", parsed)
                 return
             if self.path.startswith("/api/earnings/"):
                 try:
@@ -441,11 +467,11 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                 self._send(500, json.dumps({"ok": False, "error": str(e)}),
                            "application/json; charset=utf-8")
 
-        def _customs_request(self, method, parsed):
+        def _trade_request(self, service, prefix, method, parsed):
             try:
-                action = parsed.path.removeprefix("/api/customs/")
+                action = parsed.path.removeprefix(prefix)
                 if method == "GET":
-                    result = customs.get(action, parse_qs(parsed.query))
+                    result = service.get(action, parse_qs(parsed.query))
                 else:
                     origin = self.headers.get("Origin")
                     if origin and origin != "http://" + self.headers.get("Host", ""):
@@ -456,7 +482,7 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                     length = int(self.headers.get("Content-Length", 0))
                     if not 0 < length <= 16384:
                         raise ValueError("입력 자료 크기를 확인해 주세요.")
-                    result = customs.post(action, json.loads(self.rfile.read(length)))
+                    result = service.post(action, json.loads(self.rfile.read(length)))
                 self._send(202 if method == "POST" and action == "collect" else 200,
                            json.dumps(result, ensure_ascii=False, allow_nan=False), "application/json; charset=utf-8")
             except KeyError as exc:
@@ -473,7 +499,9 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
     print(f"   위클리 스크리너: {url}/weekly  (페이지에서 [업데이트] 클릭 시 전주 금요일 기준 스캔)")
     print(f"   주간 시장 Recap: {url}/recap  (페이지에서 [업데이트] 클릭 시 생성)")
     print(f"   섹터 ETF 설정: {url}/sector-etfs")
-    print(f"   수출입 통계: {url}/customs  (HS 품목 탐색 · 수집 데이터 업데이트 · 관련 기업)")
+    print(f"   수출입 통계(한국): {url}/customs  (HS 품목 탐색 · 수집 데이터 업데이트 · 관련 기업)")
+    print(f"   수출입 통계(미국): {url}/us-customs  (U.S. Census · HS 2→4→6 · 국가별 순위)")
+    print(f"   수출입 통계(일본): {url}/jp-customs  (재무성 e-Stat · HS 2→4→6 · 국가별 순위)")
     print("   섹터는 입력 즉시 sectors.json 에 저장됩니다 (브라우저 캐시와 무관).")
     print("   종료하려면 Ctrl+C 를 누르세요.\n")
 
