@@ -90,16 +90,18 @@ class InstrumentStore:
         for row in records:
             symbol = str(row.get("symbol", "")).strip().upper()
             country = str(row.get("country", "")).upper()
-            if not re.fullmatch(r"[A-Z0-9][A-Z0-9./_-]{0,24}", symbol) or country not in {"US","KR"}:
+            if not re.fullmatch(r"[A-Z0-9][A-Z0-9./_-]{0,24}", symbol) or country not in {"US","KR","JP"}:
                 continue
             kind = "ETF" if is_fund_record(row) else str(row.get("asset_type") or "STOCK").upper()
             if kind not in {"STOCK","ETF","UNKNOWN"}:
                 kind = "UNKNOWN"
             if exclusion_reason(self.base_dir, country, symbol, row.get("name", ""), kind, exclusions):
                 continue
+            ccy = {"KR": "KRW", "JP": "JPY"}.get(country, "USD")
+            default_market = {"KR": "KRX", "JP": "TSE"}.get(country, "NYSE")
             values.append((symbol,country,str(row.get("name") or symbol),
-                           str(row.get("market") or ("KRX" if country=="KR" else "NYSE")),
-                           "KRW" if country=="KR" else "USD",kind,source,now))
+                           str(row.get("market") or default_market),
+                           ccy,kind,source,now))
         with self.connect() as db:
             db.executemany("DELETE FROM instruments WHERE country=? AND symbol=? AND asset_type!='ETF'",
                 [tuple(key.split(':', 1)) for key in exclusions])
@@ -122,11 +124,12 @@ class InstrumentStore:
             symbol = filename[:-8].upper()
             if not re.fullmatch(r"[A-Z0-9][A-Z0-9./_-]{0,24}", symbol):
                 continue
-            country = "KR" if re.fullmatch(r"\d{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]",symbol) else "US"
+            country = ("JP" if symbol.endswith(".T")
+                       else "KR" if re.fullmatch(r"\d{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]",symbol) else "US")
             if exclusion_reason(self.base_dir, country, symbol, records=exclusions):
                 continue
-            values.append((symbol,country,symbol,"KRX" if country=="KR" else "US",
-                           "KRW" if country=="KR" else "USD","STOCK","legacy-cache",now))
+            values.append((symbol,country,symbol,{"KR":"KRX","JP":"TSE"}.get(country,"US"),
+                           {"KR":"KRW","JP":"JPY"}.get(country,"USD"),"STOCK","legacy-cache",now))
         with self.connect() as db:
             db.executemany("INSERT OR IGNORE INTO instruments VALUES (?,?,?,?,?,?,?,?)",values)
 
@@ -175,13 +178,14 @@ class InstrumentStore:
             raise ValueError("같은 코드의 종목이 여러 개입니다. 거래소:코드로 선택해 주세요.")
         if not re.fullmatch(r"[A-Z0-9][A-Z0-9./_-]{0,24}", symbol):
             raise ValueError("검색 결과에서 종목을 선택해 주세요.")
-        country = country or ("KR" if re.fullmatch(r"\d{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]",symbol) else "US")
+        country = country or ("JP" if symbol.endswith(".T")
+                              else "KR" if re.fullmatch(r"\d{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]",symbol) else "US")
         if exclusion_reason(self.base_dir, country, symbol):
             raise ValueError("수집 제외 종목입니다 (우선주·스팩): " + symbol)
         # Unlisted chart lookups remain UNKNOWN, never eligible for a screen.
         return {"symbol":symbol,"country":country,"name":symbol,
-                "market":market or ("KRX" if country=="KR" else "US"),
-                "currency":"KRW" if country=="KR" else "USD","asset_type":"UNKNOWN"}
+                "market":market or {"KR":"KRX","JP":"TSE"}.get(country,"US"),
+                "currency":{"KR":"KRW","JP":"JPY"}.get(country,"USD"),"asset_type":"UNKNOWN"}
 
     def equity_frame(self, frame):
         if frame.empty or "symbol" not in frame:

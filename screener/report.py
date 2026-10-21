@@ -21,7 +21,7 @@ def _fmt_num(v, currency: str) -> str:
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return "-"
     try:
-        if currency == "KRW":
+        if currency in ("KRW", "JPY"):
             return f"{v:,.0f}"
         return f"{v:,.2f}"
     except Exception:  # noqa: BLE001
@@ -44,6 +44,14 @@ def _fmt_marketcap(v, currency: str) -> str:
         if v >= eok:
             return f"{v/eok:,.0f}억"
         return f"{v:,.0f}"
+    if currency == "JPY":
+        cho = 1_0000_0000_0000  # 兆(조)
+        oku = 1_0000_0000       # 億(억)
+        if v >= cho:
+            return f"¥{v/cho:,.1f}兆"
+        if v >= oku:
+            return f"¥{v/oku:,.0f}億"
+        return f"¥{v:,.0f}"
     # USD 등
     t, b, m = 1e12, 1e9, 1e6
     if v >= t:
@@ -63,6 +71,7 @@ def build_records(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) ->
     high_periods = cfg.high_periods_weeks
     ma_periods = cfg.ma_periods_weeks
     usd_krw = float(cfg.usd_krw) if cfg.usd_krw else 1400.0
+    usd_jpy = float(getattr(cfg, "usd_jpy", 0) or 0) or 150.0
     records = []
     for _, r in df.iterrows():
         sym = str(r["symbol"])
@@ -72,6 +81,8 @@ def build_records(df: pd.DataFrame, cfg: Config, sectors: dict | None = None) ->
             cap_usd = None
         elif r["currency"] == "KRW":
             cap_usd = cap / usd_krw
+        elif r["currency"] == "JPY":
+            cap_usd = cap / usd_jpy
         else:
             cap_usd = cap
         rec = {

@@ -19,6 +19,19 @@ def _cache_file(cache_dir: str, symbol: str) -> str:
     return os.path.join(cache_dir, f"{safe}.parquet")
 
 
+_KR_SYMBOL = re.compile(r'[0-9]{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]')
+
+
+def _symbol_country(symbol: str) -> str:
+    """심볼로 국가 추정: 일본(.T) → JP, 한국 6자 코드 → KR, 그 외 → US."""
+    s = str(symbol).upper()
+    if s.endswith(".T"):
+        return "JP"
+    if _KR_SYMBOL.fullmatch(s):
+        return "KR"
+    return "US"
+
+
 def _fetch_one(symbol: str, start: str, sleep: float) -> Optional[pd.DataFrame]:
     """일봉 OHLCV 다운로드. 실패 시 None."""
     for attempt in range(3):
@@ -122,8 +135,7 @@ def download_all(symbols, cfg, label: str = "다운로드", asof_date=None, prog
     """
     exclusions = load_exclusions(cfg.base_dir)['instruments']
     symbols = [symbol for symbol in symbols if not exclusion_reason(cfg.base_dir,
-        'KR' if re.fullmatch(r'[0-9]{4}[0-9A-HJ-NP-TV-Z][0-9KLMN]', str(symbol).upper()) else 'US',
-        symbol, records=exclusions)]
+        _symbol_country(symbol), symbol, records=exclusions)]
     start = ((asof_date or datetime.now().date()) - timedelta(days=cfg.lookback_days)).strftime("%Y-%m-%d")
     results: Dict[str, pd.DataFrame] = {}
 

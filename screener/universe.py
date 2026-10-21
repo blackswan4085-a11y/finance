@@ -22,6 +22,7 @@ _LISTING_CODE = {
     "NASDAQ": "NASDAQ",
     "NYSE": "NYSE",
     "AMEX": "AMEX",
+    "TSE": "TSE",  # 도쿄증권거래소(일본) — FDR StockListing("TSE")가 전체 목록 제공
 }
 
 # 한국거래소(KRX) 시장 -> 캐시 CSV의 MarketId 값
@@ -157,6 +158,64 @@ def _load_us_marketcap() -> dict:
     return cap
 
 
+_jp_marketcap: Optional[dict] = None
+
+
+def _load_jp_marketcap() -> dict:
+    """TradingView 스크리너(비공식 내부 API)에서 일본 전종목 시총을 한 번에 받아
+    {symbol(코드): marketcap(JPY float)} 반환. 심볼은 숫자 코드(예: '7203').
+
+    시총(market_cap_basic)은 엔화 원값으로 저장한다(한국이 KRW 원값을 저장하는 것과
+    동일). 통화 환산(엔→달러)은 표시·정렬 단계(report.build_records)에서 한다.
+    API 키 불필요. 비공식 API라 차단될 수 있으며, 그 경우 빈 dict를 반환해 '시총
+    없이 전종목 스캔'으로 폴백한다(정배열/신고가는 주가만으로 계산 가능).
+    """
+    global _jp_marketcap
+    if _jp_marketcap is not None:
+        return _jp_marketcap
+    url = "https://scanner.tradingview.com/japan/scan"
+    payload = {
+        "filter": [],
+        "options": {"lang": "en"},
+        "columns": ["name", "market_cap_basic"],
+        "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"},
+        "range": [0, 10000],
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Origin": "https://www.tradingview.com",
+        "Referer": "https://www.tradingview.com/",
+        "Content-Type": "application/json",
+    }
+    cap: dict = {}
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=40)
+        r.raise_for_status()
+        rows = r.json().get("data") or []
+        for row in rows:
+            # s 예: 'TSE:7203' / 'NAG:7203' → 코드 7203만 취함(거래소 중복 시 TSE 우선)
+            s = str(row.get("s", ""))
+            exch, _, code = s.partition(":")
+            code = (code or s).strip().upper()
+            vals = row.get("d") or []
+            yen = vals[-1] if vals else None  # market_cap_basic(엔)
+            if not code or yen in (None, "", 0):
+                continue
+            try:
+                yen = float(yen)
+            except (TypeError, ValueError):
+                continue
+            if yen <= 0:
+                continue
+            # 같은 코드가 여러 거래소로 오면 TSE를 우선, 아니면 먼저 온 값 유지.
+            if code not in cap or exch == "TSE":
+                cap[code] = yen
+    except Exception as e:  # noqa: BLE001
+        print(f"[universe] 일본 시가총액 로드 실패(시총 없이 진행): {e}")
+    _jp_marketcap = cap
+    return cap
+
+
 # 미국 특수증권(보통주 아님) 식별용 접미사: 우선주 PR*, 유닛 U, 권리 RT, 워런트 WS,
 # When-Issued WI, 그 외 공백/점 뒤 접미사가 붙은 심볼은 거의 특수증권
 def _is_special_symbol(symbol: str) -> bool:
@@ -187,8 +246,13 @@ def _normalize(df: pd.DataFrame, market: str, exclude_special: bool = True) -> p
     name_col = cols.get("name")
     out = pd.DataFrame()
     out["symbol"] = df[sym_col].astype(str)
-    out["name"] = df[name_col].astype(str) if name_col else out["symbol"]
     meta = MARKET_META.get(market, {"country": "", "currency": ""})
+    # 일본(TSE): FDR DataReader/캐시가 '7203.T' 형식을 요구하므로 심볼에 .T 접미사를
+    # 부여해 전 구간(캐시·주가수집·표시) 일관성을 유지한다. 코드만 있는 '7203'은 404.
+    if meta.get("country") == "JP":
+        out["symbol"] = out["symbol"].map(
+            lambda s: s if str(s).upper().endswith(".T") else f"{str(s).strip()}.T")
+    out["name"] = df[name_col].astype(str) if name_col else out["symbol"]
     out["market"] = market
     out["country"] = meta["country"]
     out["currency"] = meta["currency"]
@@ -257,6 +321,19 @@ def build_universe(markets: List[str], exclude_special: bool = True) -> pd.DataF
                 print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
             else:
                 print(f"[universe] {m}: {len(norm)} 종목 (시총 소스 실패)")
+        elif meta.get("country") == "JP":
+            # 일본은 TradingView 스크리너(비공식)로 시총 일괄 수집(USD 환산).
+            # 실패하면 빈 dict → 시총 없이 전종목 스캔으로 폴백.
+            cap = _load_jp_marketcap()
+            if cap:
+                # 유니버스 심볼은 '7203.T', TradingView 키는 '7203' → .T 떼고 조회.
+                norm["marketcap"] = norm["symbol"].map(
+                    lambda s: cap.get(str(s).upper().removesuffix(".T")))
+                filled = int(norm["marketcap"].notna().sum())
+                print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
+            else:
+                norm["marketcap"] = pd.NA
+                print(f"[universe] {m}: {len(norm)} 종목 (시총 소스 실패 — 시총 없이 스캔)")
         else:
             filled = int(norm["marketcap"].notna().sum())
             print(f"[universe] {m}: {len(norm)} 종목 (시총 {filled}개)")
