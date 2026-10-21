@@ -47,6 +47,10 @@ class Config:
     # Customs statistics, local database and collection settings.
     customs: dict = field(default_factory=dict)
 
+    # 미국(Census)·일본(e-Stat) 수출입 통계 설정.
+    us_customs: dict = field(default_factory=dict)
+    jp_customs: dict = field(default_factory=dict)
+
     base_dir: str = "."
 
     @property

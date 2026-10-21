@@ -17,9 +17,11 @@ python run.py
 - `/weekly`: 주간 신고가·정배열 스크리너
 - `/recap`: 시장 Recap
 - `/industries`, `/chart`: 산업 분류와 종목·ETF 차트
-- `/customs`: 수출입 통계
+- `/customs`: 수출입 통계(한국 관세청)
+- `/us-customs`: 수출입 통계(미국 U.S. Census)
+- `/jp-customs`: 수출입 통계(일본 재무성 e-Stat)
 
-수출입 데이터를 수집하려면 `.env.example`을 `.env`로 복사하고 `CUSTOMS_API_KEY`를 입력합니다. 컨콜 요약과 Recap 코멘터리에는 설치·로그인된 Codex CLI를 사용합니다. 수치 입력·저장에는 AI가 필요하지 않습니다.
+수출입 데이터를 수집하려면 `.env.example`을 `.env`로 복사하고 나라별 키를 입력합니다: 한국 `CUSTOMS_API_KEY`(공공데이터포털), 미국 `CENSUS_API_KEY`(api.census.gov), 일본 `ESTAT_APP_ID`(e-Stat). 각 페이지의 [데이터 업데이트] 버튼으로 수집하며, 세 나라 모두 HS 2→4→6 드릴다운·5개년 월간추이·YoY/QoQ를 제공하고 미국·일본은 HS6 상세에서 상대국 순위도 보여줍니다. 컨콜 요약과 Recap 코멘터리에는 설치·로그인된 Codex CLI를 사용합니다. 수치 입력·저장에는 AI가 필요하지 않습니다.
 
 ## 저장소 구성
 

@@ -12,6 +12,16 @@ customs:
   db_path: customs_workspace/trade.db
   months: 60
 
+# 미국 수출입 통계(U.S. Census). API 키는 CENSUS_API_KEY 환경변수 또는 .env.
+us_customs:
+  db_path: us_customs_workspace/ustrade.db
+  months: 60
+
+# 일본 수출입 통계(재무성 e-Stat). appId는 ESTAT_APP_ID 환경변수 또는 .env.
+jp_customs:
+  db_path: jp_customs_workspace/jptrade.db
+  years: 5
+
 # 스캔할 시장 (원하는 것만 켜세요)
 #   한국: KOSPI, KOSDAQ
 #   미국: NASDAQ, NYSE
