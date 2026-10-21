@@ -640,18 +640,17 @@ function renderDetail(detail){
 function renderCompanies(prefix, level, companies){
   const app=document.getElementById('app');
   const panel=el('div',{class:'panel companies'});
-  panel.appendChild(el('h2',{},['🏢 관련 기업']));
+  panel.appendChild(el('h2',{},['🏢 관련 종목']));
   if(!STATIC){
     const form=el('form');
-    const co=el('input',{type:'text',placeholder:'기업명',style:'flex:1;min-width:140px'});
-    const nt=el('input',{type:'text',placeholder:'메모 (선택)',style:'flex:2;min-width:160px'});
+    const co=el('input',{type:'text',placeholder:'종목 코드·이름 (예: 005930, AAPL)',style:'flex:1;min-width:200px'});
     const btn=el('button',{type:'submit'},['추가']);
     const status=el('div',{class:'empty',role:'status'});
-    form.appendChild(co); form.appendChild(nt); form.appendChild(btn);
+    form.appendChild(co); form.appendChild(btn);
     form.onsubmit=async(e)=>{ e.preventDefault(); if(!co.value.trim())return;
       btn.disabled=true;
       try {
-        await apiPost('/api/company/add',{hs_code:prefix,hs_level:level,company:co.value.trim(),note:nt.value.trim()});
+        await apiPost('/api/company/add',{hs_code:prefix,hs_level:level,symbol:co.value.trim()});
         await route();
       } catch(error) { status.textContent=error.message; }
       finally { btn.disabled=false; }
@@ -660,12 +659,13 @@ function renderCompanies(prefix, level, companies){
     panel.appendChild(status);
   }
   if(!companies||!companies.length){
-    panel.appendChild(el('div',{class:'empty'},['등록된 관련 기업이 없습니다.']));
+    panel.appendChild(el('div',{class:'empty'},['등록된 관련 종목이 없습니다.']));
   } else {
+    const MKT={KR:'한국',US:'미국'};
     companies.forEach(c=>{
       const row=el('div',{class:'co'});
-      row.appendChild(el('span',{class:'nm'},[c.company]));
-      row.appendChild(el('span',{class:'nt'},[c.note||'']));
+      row.appendChild(el('span',{class:'nm'},[c.name||c.symbol]));
+      row.appendChild(el('span',{class:'nt'},[c.symbol+(c.market?(' · '+c.market):(' · '+(MKT[c.country]||c.country||'')))]));
       if(!STATIC){
         const d=el('button',{class:'del'},['삭제']);
         d.onclick=async()=>{

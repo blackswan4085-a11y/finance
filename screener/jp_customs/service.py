@@ -26,8 +26,9 @@ def _key_from_env(path: Path) -> str | None:
 
 
 class JpCustomsService:
-    def __init__(self, base_dir, settings=None):
+    def __init__(self, base_dir, settings=None, store=None):
         self.base = Path(base_dir).resolve()
+        self.store = store  # InstrumentStore — 관련 종목 검증용(선택)
         self.settings = settings or {}
         if not isinstance(self.settings, dict):
             raise ValueError("jp_customs 설정은 매핑이어야 합니다.")
@@ -136,19 +137,20 @@ class JpCustomsService:
             code = self._code(payload.get("hs_code"))
             if int(payload.get("hs_level", 0)) != len(code):
                 raise ValueError("HS 코드와 레벨이 일치하지 않습니다.")
-            company, note = payload.get("company"), payload.get("note", "")
-            if not isinstance(company, str) or not company.strip() or len(company) > 200:
-                raise ValueError("기업명을 1~200자로 입력해 주세요.")
-            if not isinstance(note, str) or len(note) > 2000:
-                raise ValueError("메모를 2,000자 이내로 입력해 주세요.")
+            if self.store is None:
+                raise ValueError("종목 조회를 사용할 수 없습니다.")
+            row = self.store.resolve(str(payload.get("symbol", "")))
+            stock = {"symbol": str(row["symbol"]), "country": str(row["country"]),
+                     "name": str(row.get("name") or row["symbol"]), "market": str(row.get("market") or "")}
         else:
             cid = payload.get("id")
             if isinstance(cid, bool) or not isinstance(cid, int) or cid <= 0:
-                raise ValueError("관련 기업 ID를 확인해 주세요.")
+                raise ValueError("관련 종목 ID를 확인해 주세요.")
         self.ensure_ready()
         with closing(db.connect(str(self.path))) as conn:
             if action == "company/add":
-                db.add_company(conn, code, len(code), company.strip(), note.strip(),
+                db.add_company(conn, code, len(code), stock["symbol"], stock["country"],
+                               stock["name"], stock["market"],
                                datetime.now().isoformat(timespec="seconds"))
             else:
                 db.delete_company(conn, cid)
