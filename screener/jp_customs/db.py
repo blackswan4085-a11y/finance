@@ -59,6 +59,15 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS unit_price (
+            flow TEXT NOT NULL, period TEXT NOT NULL, hs_code TEXT NOT NULL,
+            value INTEGER, qty INTEGER, unit TEXT,
+            PRIMARY KEY (flow, period, hs_code)
+        )
+        """
+    )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jphs_period ON trade_hs(period)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jphs_code ON trade_hs(hs_code)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jphs_level ON trade_hs(hs_level)")
@@ -237,6 +246,33 @@ def compute_quarterly(series: list[dict], field: str) -> list[dict]:
         out.append({"label": f"{y} Q{q}", "value": val, "qoq": qoq})
         prev_val = val
     return out
+
+
+# ----------------------------- 단가 (unit_price) -----------------------------
+def has_unit_price(conn: sqlite3.Connection, hs6: str) -> bool:
+    return conn.execute("SELECT 1 FROM unit_price WHERE hs_code=? LIMIT 1", (hs6,)).fetchone() is not None
+
+
+def unit_price_series(conn: sqlite3.Connection, hs6: str) -> dict:
+    """HS6 월별 단가 series + 대표 단위. 금액(천엔)/수량. 미국판과 동일 형식."""
+    rows = conn.execute(
+        "SELECT flow, period, value, qty, unit FROM unit_price WHERE hs_code=? ORDER BY period",
+        (hs6,),
+    ).fetchall()
+    by_period: dict[str, dict] = {}
+    units, mixed = set(), False
+    for r in rows:
+        p = by_period.setdefault(r["period"], {"period": r["period"], "exp_unit": None, "imp_unit": None})
+        u = (r["unit"] or "")
+        if u == "MIXED":
+            mixed = True
+        elif u:
+            units.add(u)
+        if r["qty"] and r["qty"] > 0 and r["value"] is not None:
+            p["exp_unit" if r["flow"] == "exp" else "imp_unit"] = r["value"] / r["qty"]
+    series = [by_period[k] for k in sorted(by_period)]
+    unit = next(iter(units)) if len(units) == 1 else ("단위혼합" if (mixed or len(units) > 1) else "")
+    return {"series": series, "unit": unit, "mixed": mixed or len(units) > 1}
 
 
 # ----------------------------- 관련 종목 -----------------------------

@@ -129,11 +129,28 @@ class UsCustomsService:
         imp_ctry = db.country_breakdown(conn, code, period, "imp")
         exp_ctry = db.country_breakdown(conn, code, period, "exp")
         series = db.monthly_series(conn, code)
+        # 단가(HS6): HS10 수량을 온디맨드 수집해 금액/수량 계산. 단위 혼합이면 생략 표시.
+        unit_price = None
+        if level == 6:
+            if not db.has_unit_price(conn, code) and key:
+                from .collector import collect_unit_price
+                collect_unit_price(conn, key, code, months=self.months)
+            up = db.unit_price_series(conn, code)
+            if up["mixed"] and not up["series"]:
+                unit_price = {"note": "하위 품목의 수량 단위가 섞여 단가를 계산할 수 없습니다."}
+            elif up["mixed"]:
+                unit_price = {"basis": "quantity", "qtyUnit": up["unit"] or "단위혼합",
+                              "valueUnit": "USD", "series": up["series"],
+                              "note": "일부 하위 품목 단위가 섞여 있어 단가는 참고용입니다."}
+            elif up["series"]:
+                unit_price = {"basis": "quantity", "qtyUnit": up["unit"] or "개",
+                              "valueUnit": "USD", "series": up["series"]}
         return {"prefix": code, "level": level, "name": db.name_for(conn, code),
                 "series": series, "expYoy": db.compute_yoy(series, "exp_dlr"),
                 "impYoy": db.compute_yoy(series, "imp_dlr"),
                 "qExp": db.compute_quarterly(series, "exp_dlr"),
                 "impCountries": imp_ctry, "expCountries": exp_ctry,
+                "unitPrice": unit_price,
                 "companies": db.list_companies(conn, code)}
 
     def post(self, action, payload):

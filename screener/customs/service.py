@@ -137,6 +137,9 @@ class CustomsService:
                     "series": series, "expYoy": db.compute_yoy(series, "exp_dlr"),
                     "impYoy": db.compute_yoy(series, "imp_dlr"),
                     "qExp": db.compute_quarterly(series, "exp_dlr"),
+                    # 단가: 금액(USD) / 중량(kg). series 의 exp_wgt/imp_wgt 로 프런트에서 계산.
+                    "unitPrice": {"basis": "weight", "qtyUnit": "kg", "valueUnit": "USD",
+                                  "expQtyField": "exp_wgt", "impQtyField": "imp_wgt"},
                     "companies": db.list_companies(conn, code)}
 
     def post(self, action, payload):
