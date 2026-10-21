@@ -119,11 +119,24 @@ class JpCustomsService:
             imp_ctry = db.country_breakdown(conn, code, "imp")
             exp_ctry = db.country_breakdown(conn, code, "exp")
         series = db.monthly_series(conn, code)
+        # 단가(HS6): 수집 시 저장된 unit_price(금액 천엔 / 수량)를 사용.
+        unit_price = None
+        if level == 6:
+            up = db.unit_price_series(conn, code)
+            pts = [p for p in up["series"] if p.get("exp_unit") is not None or p.get("imp_unit") is not None]
+            if pts:
+                unit_price = {"basis": "quantity", "qtyUnit": up["unit"] or "단위",
+                              "valueUnit": "千엔", "series": up["series"]}
+                if up["mixed"]:
+                    unit_price["note"] = "일부 하위 품목 단위가 섞여 있어 단가는 참고용입니다."
+            elif up["mixed"]:
+                unit_price = {"note": "하위 품목의 수량 단위가 섞여 단가를 계산할 수 없습니다."}
         return {"prefix": code, "level": level, "name": db.name_for(conn, code),
                 "series": series, "expYoy": db.compute_yoy(series, "exp_dlr"),
                 "impYoy": db.compute_yoy(series, "imp_dlr"),
                 "qExp": db.compute_quarterly(series, "exp_dlr"),
                 "impCountries": imp_ctry, "expCountries": exp_ctry,
+                "unitPrice": unit_price,
                 "companies": db.list_companies(conn, code)}
 
     def post(self, action, payload):

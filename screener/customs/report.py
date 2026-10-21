@@ -212,6 +212,15 @@ function fmtUSD(v){
   return '$'+Math.round(v).toLocaleString();
 }
 function fmtPct(v){ return (v===null||v===undefined||isNaN(v))?'-':(v>=0?'+':'')+v.toFixed(1)+'%'; }
+// 단가 포맷: 통화기호 + 자릿수 적응(소수). 큰 값은 K/M 로 축약.
+function fmtUnit(v){
+  if(v===null||v===undefined||isNaN(v)) return '-';
+  const a=Math.abs(v);
+  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
+  if(a>=1e3) return '$'+(v/1e3).toFixed(2)+'K';
+  if(a>=1) return '$'+v.toFixed(2);
+  return '$'+v.toFixed(4);
+}
 function cls(v){ return v>=0?'pos':'neg'; }
 function esc(value){ return String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // 방향 색상(한국식): 상승=빨강, 하락=파랑. 증감률(YoY/QoQ) 막대·배지에 사용.
@@ -341,6 +350,7 @@ function lineChart(series, opts){
   const W=opts.w||920, H=opts.h||344, m={t:18,r:18,b:48,l:70};
   const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const keys=opts.keys; // [{field,color,name}]
+  const vfmt = opts.fmt==='unit' ? fmtUnit : fmtUSD;  // 단가 차트는 소수 포맷
   let maxv=0;
   series.forEach(d=>keys.forEach(k=>{maxv=Math.max(maxv,d[k.field]||0)}));
   maxv=(maxv||1)*1.08;
@@ -362,7 +372,7 @@ function lineChart(series, opts){
   // y 그리드
   for(let g=0; g<=4; g++){ const v=maxv*g/4, y=Y(v);
     add('line',{x1:m.l,y1:y,x2:W-m.r,y2:y,stroke:'#273149','stroke-width':1});
-    const t=add('text',{x:m.l-8,y:y+3.5,'text-anchor':'end'}); t.setAttribute('class','svg-tip'); t.textContent=fmtUSD(v);
+    const t=add('text',{x:m.l-8,y:y+3.5,'text-anchor':'end'}); t.setAttribute('class','svg-tip'); t.textContent=vfmt(v);
   }
   // x축: 연 경계(1월)는 굵은 라벨+구분선, 그 사이 분기(4/7/10월)는 옅은 월 눈금.
   // 간격이 안 맞는 맨 왼쪽(1월이 아닌 시작월) 연도 라벨은 생략한다.
@@ -396,12 +406,15 @@ function lineChart(series, opts){
     keys.forEach(k=>{ svgAdd(markG,'circle',{cx:X(i),cy:Y(d[k.field]||0),r:4,fill:k.color,stroke:'#0f1420','stroke-width':1.5}); });
     let rows='';
     keys.forEach(k=>{ const nm=k.name||(k.field==='exp_dlr'?'수출':k.field==='imp_dlr'?'수입':k.field);
-      rows+=`<div class="tr"><span class="dot" style="background:${k.color}"></span>${nm}<b>${fmtUSD(d[k.field]||0)}</b></div>`; });
-    const bal=(d.exp_dlr||0)-(d.imp_dlr||0);
-    rows+=`<div class="tr sub">무역수지<b class="${bal>=0?'pos':'neg'}">${fmtUSD(bal)}</b></div>`;
+      const val=d[k.field]; const disp=(val==null)?'-':vfmt(val);
+      rows+=`<div class="tr"><span class="dot" style="background:${k.color}"></span>${nm}<b>${disp}</b></div>`; });
+    if(opts.fmt!=='unit'){
+      const bal=(d.exp_dlr||0)-(d.imp_dlr||0);
+      rows+=`<div class="tr sub">무역수지<b class="${bal>=0?'pos':'neg'}">${fmtUSD(bal)}</b></div>`;
+    }
     // 가로 십자선은 주 계열(첫번째=수출)에 맞춤
     const prim=keys[0], yF=Y(d[prim.field]||0);
-    return {html:`<div class="th">${ymLong(d.period)}</div>${rows}`, yFocus:yF, xBadge:ymLabel(d.period), yBadge:fmtUSD(d[prim.field]||0)};
+    return {html:`<div class="th">${ymLong(d.period)}</div>${rows}`, yFocus:yF, xBadge:ymLabel(d.period), yBadge:vfmt(d[prim.field]||0)};
   }});
   return svg;
 }
@@ -633,8 +646,35 @@ function renderDetail(detail){
   row.appendChild(p2);
   app.appendChild(row);
 
+  // 단가 추이 (금액/수량). detail.unitPrice 로 수량 필드·단위를 받는다.
+  renderUnitPrice(detail);
+
   // 관련 기업
   renderCompanies(prefix, level, detail.companies);
+}
+
+// 단가 패널: 월별 (수출/수입) 금액 ÷ 수량. 수량 0인 달은 건너뛴다.
+function renderUnitPrice(detail){
+  const app=document.getElementById('app');
+  const up=detail.unitPrice;
+  if(!up) return;
+  const expF=up.expQtyField, impF=up.impQtyField, qu=up.qtyUnit;
+  // 단가 시계열 계산
+  const pts=(detail.series||[]).map(d=>{
+    const eq=d[expF]||0, iq=d[impF]||0;
+    return {period:d.period,
+            exp_unit: eq>0 ? d.exp_dlr/eq : null,
+            imp_unit: iq>0 ? d.imp_dlr/iq : null};
+  });
+  const hasAny=pts.some(p=>p.exp_unit!=null||p.imp_unit!=null);
+  const panel=el('div',{class:'panel'});
+  panel.appendChild(el('h2',{},['단가 추이 ('+(up.valueUnit||'')+'/'+qu+')']));
+  if(up.note){ panel.appendChild(el('div',{class:'empty'},[up.note])); app.appendChild(panel); return; }
+  if(!hasAny){ panel.appendChild(el('div',{class:'empty'},['이 품목은 수량 자료가 없어 단가를 표시할 수 없습니다.'])); app.appendChild(panel); return; }
+  const lg=el('div',{class:'legend'}); lg.innerHTML='<span><span class="dot" style="background:#4a90ff"></span>수출 단가</span><span><span class="dot" style="background:#ff5c6c"></span>수입 단가</span>';
+  panel.appendChild(lg);
+  panel.appendChild(lineChart(pts,{keys:[{field:'exp_unit',color:'#4a90ff',name:'수출 단가'},{field:'imp_unit',color:'#ff5c6c',name:'수입 단가'}],fmt:'unit'}));
+  app.appendChild(panel);
 }
 
 function renderCompanies(prefix, level, companies){

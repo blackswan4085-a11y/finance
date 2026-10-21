@@ -213,6 +213,14 @@ function fmtUSD(v){
   return '$'+Math.round(v).toLocaleString();
 }
 function fmtPct(v){ return (v===null||v===undefined||isNaN(v))?'-':(v>=0?'+':'')+v.toFixed(1)+'%'; }
+function fmtUnit(v){
+  if(v===null||v===undefined||isNaN(v)) return '-';
+  const a=Math.abs(v);
+  if(a>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
+  if(a>=1e3) return '$'+(v/1e3).toFixed(2)+'K';
+  if(a>=1) return '$'+v.toFixed(2);
+  return '$'+v.toFixed(4);
+}
 function cls(v){ return v>=0?'pos':'neg'; }
 const UP='#ff5c6c', DOWN='#4a90ff';
 function dirColor(v){ return v>=0?UP:DOWN; }
@@ -329,6 +337,7 @@ function lineChart(series, opts){
   const W=opts.w||920, H=opts.h||344, m={t:18,r:18,b:48,l:70};
   const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const keys=opts.keys;
+  const vfmt = opts.fmt==='unit' ? fmtUnit : fmtUSD;
   let maxv=0;
   series.forEach(d=>keys.forEach(k=>{maxv=Math.max(maxv,d[k.field]||0)}));
   maxv=(maxv||1)*1.08;
@@ -348,7 +357,7 @@ function lineChart(series, opts){
   });
   for(let g=0; g<=4; g++){ const v=maxv*g/4, y=Y(v);
     add('line',{x1:m.l,y1:y,x2:W-m.r,y2:y,stroke:'#273149','stroke-width':1});
-    const t=add('text',{x:m.l-8,y:y+3.5,'text-anchor':'end'}); t.setAttribute('class','svg-tip'); t.textContent=fmtUSD(v);
+    const t=add('text',{x:m.l-8,y:y+3.5,'text-anchor':'end'}); t.setAttribute('class','svg-tip'); t.textContent=vfmt(v);
   }
   const axY=H-m.b+26;
   series.forEach((d,i)=>{
@@ -378,11 +387,14 @@ function lineChart(series, opts){
     keys.forEach(k=>{ svgAdd(markG,'circle',{cx:X(i),cy:Y(d[k.field]||0),r:4,fill:k.color,stroke:'#0f1420','stroke-width':1.5}); });
     let rows='';
     keys.forEach(k=>{ const nm=k.name||(k.field==='exp_dlr'?'수출':k.field==='imp_dlr'?'수입':k.field);
-      rows+=`<div class="tr"><span class="dot" style="background:${k.color}"></span>${nm}<b>${fmtUSD(d[k.field]||0)}</b></div>`; });
-    const bal=(d.exp_dlr||0)-(d.imp_dlr||0);
-    rows+=`<div class="tr sub">무역수지<b class="${bal>=0?'pos':'neg'}">${fmtUSD(bal)}</b></div>`;
+      const val=d[k.field]; const disp=(val==null)?'-':vfmt(val);
+      rows+=`<div class="tr"><span class="dot" style="background:${k.color}"></span>${nm}<b>${disp}</b></div>`; });
+    if(opts.fmt!=='unit'){
+      const bal=(d.exp_dlr||0)-(d.imp_dlr||0);
+      rows+=`<div class="tr sub">무역수지<b class="${bal>=0?'pos':'neg'}">${fmtUSD(bal)}</b></div>`;
+    }
     const prim=keys[0], yF=Y(d[prim.field]||0);
-    return {html:`<div class="th">${ymLong(d.period)}</div>${rows}`, yFocus:yF, xBadge:ymLabel(d.period), yBadge:fmtUSD(d[prim.field]||0)};
+    return {html:`<div class="th">${ymLong(d.period)}</div>${rows}`, yFocus:yF, xBadge:ymLabel(d.period), yBadge:vfmt(d[prim.field]||0)};
   }});
   return svg;
 }
@@ -650,7 +662,25 @@ function renderDetail(detail){
     app.appendChild(crow);
   }
 
+  renderUnitPrice(detail);
   renderCompanies(prefix, level, detail.companies);
+}
+
+// 단가 패널: unitPrice.series(exp_unit/imp_unit)가 있으면 그걸, 없으면 생략.
+function renderUnitPrice(detail){
+  const app=document.getElementById('app');
+  const up=detail.unitPrice;
+  if(!up) return;
+  const panel=el('div',{class:'panel'});
+  panel.appendChild(el('h2',{},['단가 추이 ('+(up.valueUnit||'USD')+'/'+(up.qtyUnit||'')+')']));
+  const pts=(up.series||[]).filter(p=>p.exp_unit!=null||p.imp_unit!=null);
+  if(up.note && !pts.length){ panel.appendChild(el('div',{class:'empty'},[up.note])); app.appendChild(panel); return; }
+  if(!pts.length){ panel.appendChild(el('div',{class:'empty'},['이 품목은 수량 자료가 없어 단가를 표시할 수 없습니다.'])); app.appendChild(panel); return; }
+  if(up.note) panel.appendChild(el('div',{class:'hint'},[up.note]));
+  const lg=el('div',{class:'legend'}); lg.innerHTML='<span><span class="dot" style="background:#4a90ff"></span>수출 단가</span><span><span class="dot" style="background:#ff5c6c"></span>수입 단가</span>';
+  panel.appendChild(lg);
+  panel.appendChild(lineChart(up.series,{keys:[{field:'exp_unit',color:'#4a90ff',name:'수출 단가'},{field:'imp_unit',color:'#ff5c6c',name:'수입 단가'}],fmt:'unit'}));
+  app.appendChild(panel);
 }
 
 function countryPanel(title, list, color){

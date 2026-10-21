@@ -29,8 +29,10 @@ RETRY_WAIT = 3
 REQUEST_WAIT = 0.2
 
 FLOW = {
-    "imp": {"url": IMPORTS_URL, "commodity": "I_COMMODITY", "sdesc": "I_COMMODITY_SDESC", "value": "GEN_VAL_MO"},
-    "exp": {"url": EXPORTS_URL, "commodity": "E_COMMODITY", "sdesc": "E_COMMODITY_SDESC", "value": "ALL_VAL_MO"},
+    "imp": {"url": IMPORTS_URL, "commodity": "I_COMMODITY", "sdesc": "I_COMMODITY_SDESC",
+            "value": "GEN_VAL_MO", "qty": "GEN_QY1_MO", "unit": "UNIT_QY1"},
+    "exp": {"url": EXPORTS_URL, "commodity": "E_COMMODITY", "sdesc": "E_COMMODITY_SDESC",
+            "value": "ALL_VAL_MO", "qty": "QTY_1_MO", "unit": "UNIT_QY1"},
 }
 
 
@@ -242,6 +244,75 @@ def collect_country_breakdown(conn, key, hs_code, period=None, force=False):
                 if r["hs_code"] == hs_code]
         save_rows(conn, rows)
         total += len(rows)
+        time.sleep(REQUEST_WAIT)
+    return total
+
+
+def _fetch_hs10_qty(key, flow, hs6, start, end):
+    """HS6 하위 HS10 의 금액·수량·단위를 기간범위로 조회(전체합산 '-').
+
+    Census 는 HS6 집계 레벨에선 수량을 0 으로 주므로, HS10(최하위)에서 받아
+    단위가 동일한 것만 HS6·월별로 합산한다. 반환: {period: (value, qty, unit)}.
+    단위가 섞이면 unit='MIXED', qty 합산 생략(None).
+    """
+    f = FLOW[flow]
+    params = {"get": f"{f['commodity']},{f['value']},{f['qty']},{f['unit']}",
+              "COMM_LVL": "HS10", f["commodity"]: hs6 + "*",
+              "CTY_CODE": "-", "time": time_range(start, end)}
+    resp = _get(key, f["url"], params)
+    # period -> {"value": v, "qty": q, "units": set()}
+    acc = {}
+    for r in resp:
+        code = (r.get(f["commodity"]) or "").strip()
+        if not code.startswith(hs6):
+            continue
+        period = (r.get("time") or "").strip()
+        unit = (r.get(f["unit"]) or "").strip()
+        val = to_int(r.get(f["value"]))
+        qty = to_int(r.get(f["qty"]))
+        a = acc.setdefault(period, {"value": 0, "qty": 0, "units": set()})
+        a["value"] += val
+        if unit and unit != "-" and qty > 0:
+            a["qty"] += qty
+            a["units"].add(unit)
+    out = {}
+    for period, a in acc.items():
+        if len(a["units"]) == 1 and a["qty"] > 0:
+            out[period] = (a["value"], a["qty"], next(iter(a["units"])))
+        else:
+            out[period] = (a["value"], None, "MIXED" if len(a["units"]) > 1 else "")
+    return out
+
+
+def have_unit_price(conn, flow, hs6) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM unit_price WHERE flow=? AND hs_code=? LIMIT 1", (flow, hs6)
+    ).fetchone()
+    return row is not None
+
+
+def collect_unit_price(conn, key, hs6, months=MONTHS, force=False):
+    """온디맨드: HS6 의 월별 단가(금액/수량)를 HS10 에서 집계해 unit_price 에 저장."""
+    if len(hs6) != 6:
+        return 0
+    latest = latest_in_db(conn) or detect_latest_month(key)
+    y, m = int(latest[:4]), int(latest[5:])
+    sy, sm = add_months(y, m, -(months - 1))
+    start = f"{sy:04d}-{sm:02d}"
+    total = 0
+    for flow in ("imp", "exp"):
+        if not force and have_unit_price(conn, flow, hs6):
+            continue
+        series = _fetch_hs10_qty(key, flow, hs6, start, latest)
+        rows = [{"flow": flow, "period": p, "hs_code": hs6,
+                 "value": v, "qty": q, "unit": u}
+                for p, (v, q, u) in series.items()]
+        if rows:
+            conn.executemany(
+                "INSERT OR REPLACE INTO unit_price (flow, period, hs_code, value, qty, unit) "
+                "VALUES (:flow, :period, :hs_code, :value, :qty, :unit)", rows)
+            conn.commit()
+            total += len(rows)
         time.sleep(REQUEST_WAIT)
     return total
 

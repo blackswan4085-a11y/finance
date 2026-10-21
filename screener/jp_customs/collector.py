@@ -50,6 +50,11 @@ MONTH_COLS = [
     "Value-Jan", "Value-Feb", "Value-Mar", "Value-Apr", "Value-May", "Value-Jun",
     "Value-Jul", "Value-Aug", "Value-Sep", "Value-Oct", "Value-Nov", "Value-Dec",
 ]
+# 단가용 수량1(Unit1 기준) 월별 컬럼. Value 컬럼과 같은 순서(1~12월).
+QTY_COLS = [
+    "Quantity1-Jan", "Quantity1-Feb", "Quantity1-Mar", "Quantity1-Apr", "Quantity1-May", "Quantity1-Jun",
+    "Quantity1-Jul", "Quantity1-Aug", "Quantity1-Sep", "Quantity1-Oct", "Quantity1-Nov", "Quantity1-Dec",
+]
 
 
 def load_app_id():
@@ -215,9 +220,13 @@ def parse_hs_csv(text, year):
     period='YYYY-MM' 레코드로 전개한다. 값이 0인 월은 건너뛰지 않고 0으로 저장하되,
     HS6 집계 후 해당 월 합이 0이면 생략한다.
 
-    반환: {flow: {(hs6, 'YYYY-MM'): value}}
+    반환: (agg_value, agg_qty)
+      agg_value: {flow: {(hs6,'YYYY-MM'): value}}  — 금액(천엔)
+      agg_qty:   {flow: {(hs6,'YYYY-MM'): {"qty": q, "value": v, "units": set()}}} — 단가용
+    단가 집계는 Unit1(수량1) 기준이며, 같은 HS6 아래 9자리 단위가 섞이면 units 가 2개 이상이 된다.
     """
     agg = {"exp": {}, "imp": {}}
+    qagg = {"exp": {}, "imp": {}}
     reader = csv.DictReader(io.StringIO(text))
     for row in reader:
         flow = FLOW_CSV_CODE.get((row.get("Exp or Imp") or "").strip())
@@ -227,14 +236,46 @@ def parse_hs_csv(text, year):
         if len(hs) < 6 or not hs[:6].isdigit():
             continue
         hs6 = hs[:6]
-        for mi, col in enumerate(MONTH_COLS, start=1):
-            v = to_int(row.get(col))
-            if v == 0:
-                continue
+        unit = (row.get("Unit1") or "").strip()
+        for mi, (vcol, qcol) in enumerate(zip(MONTH_COLS, QTY_COLS), start=1):
+            v = to_int(row.get(vcol))
             period = f"{year:04d}-{mi:02d}"
             key = (hs6, period)
-            agg[flow][key] = agg[flow].get(key, 0) + v
-    return agg
+            if v != 0:
+                agg[flow][key] = agg[flow].get(key, 0) + v
+            q = to_int(row.get(qcol))
+            # 단가용: 금액+수량을 HS6·월별로 누적(단위 동일시만 의미). 수량/단위 없으면 units 미포함.
+            qa = qagg[flow].setdefault(key, {"qty": 0, "value": 0, "units": set()})
+            qa["value"] += v
+            if unit and q > 0:
+                qa["qty"] += q
+                qa["units"].add(unit)
+    return agg, qagg
+
+
+def _unit_price_rows(flow, qagg_flow):
+    """qagg[flow] → unit_price 저장용 행. 단위 혼합이면 qty=None, unit='MIXED'."""
+    rows = []
+    for (hs6, period), a in qagg_flow.items():
+        if a["value"] == 0 and a["qty"] == 0:
+            continue
+        if len(a["units"]) == 1 and a["qty"] > 0:
+            rows.append({"flow": flow, "period": period, "hs_code": hs6,
+                         "value": a["value"], "qty": a["qty"], "unit": next(iter(a["units"]))})
+        else:
+            rows.append({"flow": flow, "period": period, "hs_code": hs6,
+                         "value": a["value"], "qty": None,
+                         "unit": "MIXED" if len(a["units"]) > 1 else ""})
+    return rows
+
+
+def save_unit_price_rows(conn, rows):
+    if not rows:
+        return
+    conn.executemany(
+        "INSERT OR REPLACE INTO unit_price (flow, period, hs_code, value, qty, unit) "
+        "VALUES (:flow, :period, :hs_code, :value, :qty, :unit)", rows)
+    conn.commit()
 
 
 def _rollup_levels(hs6_rows):
@@ -316,9 +357,10 @@ def run_collection(progress=None, incremental=True, db_path=None, api_key=None, 
         emit(phase="step", index=i, total=total, flow=flow, year=year,
              message=f"[{i}/{total}] {year}년 {label} CSV 다운로드...")
         text = download_csv(url, app_id)
-        agg = parse_hs_csv(text, year)
+        agg, qagg = parse_hs_csv(text, year)
         acc = _rollup_levels(agg[flow])
         n = save_hs_rows(conn, flow, acc)
+        save_unit_price_rows(conn, _unit_price_rows(flow, qagg[flow]))  # 단가(금액/수량) 저장
         rows_total += n
         emit(phase="step", index=i, total=total, flow=flow, year=year,
              rows=n, cumulative=rows_total,

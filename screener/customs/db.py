@@ -149,11 +149,13 @@ def name_for(conn: sqlite3.Connection, prefix: str) -> str:
 
 
 def monthly_series(conn: sqlite3.Connection, prefix: str) -> list[dict[str, Any]]:
-    """prefix 의 월별 수출/수입 합계 시계열 (오름차순)."""
+    """prefix 의 월별 수출/수입 합계 시계열 (오름차순). 중량(kg) 포함 — 단가(금액/중량) 계산용."""
     sql = """
         SELECT period,
                SUM(exp_dlr) AS exp_dlr,
-               SUM(imp_dlr) AS imp_dlr
+               SUM(imp_dlr) AS imp_dlr,
+               SUM(exp_wgt) AS exp_wgt,
+               SUM(imp_wgt) AS imp_wgt
         FROM trade_raw
         WHERE hs_code LIKE ?
         GROUP BY period
@@ -165,6 +167,8 @@ def monthly_series(conn: sqlite3.Connection, prefix: str) -> list[dict[str, Any]
             "period": r["period"],
             "exp_dlr": r["exp_dlr"] or 0,
             "imp_dlr": r["imp_dlr"] or 0,
+            "exp_wgt": r["exp_wgt"] or 0,
+            "imp_wgt": r["imp_wgt"] or 0,
         }
         for r in rows
     ]
