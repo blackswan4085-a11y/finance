@@ -31,13 +31,16 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_trade_hs ON trade_raw(hs_code)")
     conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS related_companies (
+        CREATE TABLE IF NOT EXISTS related_stocks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             hs_code TEXT NOT NULL,
             hs_level INTEGER NOT NULL,
-            company TEXT NOT NULL,
-            note TEXT,
-            created_at TEXT NOT NULL
+            symbol TEXT NOT NULL,
+            country TEXT NOT NULL,
+            name TEXT,
+            market TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE (hs_code, symbol, country)
         )
         """
     )
@@ -241,13 +244,14 @@ def all_series_by_level(conn: sqlite3.Connection, level: int, prefix: str = "") 
 
 
 def all_companies(conn: sqlite3.Connection) -> dict[str, list[dict]]:
-    """hs_code 별 관련기업 매핑."""
+    """hs_code 별 관련 종목 매핑."""
     out: dict[str, list[dict]] = {}
     for r in conn.execute(
-        "SELECT id, hs_code, company, note, created_at FROM related_companies ORDER BY created_at"
+        "SELECT id, hs_code, symbol, country, name, market, created_at FROM related_stocks ORDER BY created_at"
     ):
         out.setdefault(r["hs_code"], []).append(
-            {"id": r["id"], "company": r["company"], "note": r["note"], "created_at": r["created_at"]}
+            {"id": r["id"], "symbol": r["symbol"], "country": r["country"],
+             "name": r["name"], "market": r["market"], "created_at": r["created_at"]}
         )
     return out
 
@@ -291,25 +295,30 @@ def compute_quarterly(series: list[dict], field: str) -> list[dict]:
     return out
 
 
-# ----------------------------- 관련 기업 -----------------------------
+# ----------------------------- 관련 종목 -----------------------------
 def list_companies(conn: sqlite3.Connection, hs_code: str) -> list[dict]:
+    """HS 코드에 연결된 관련 종목 목록."""
     rows = conn.execute(
-        "SELECT id, company, note, created_at FROM related_companies WHERE hs_code = ? ORDER BY created_at",
+        "SELECT id, symbol, country, name, market, created_at FROM related_stocks "
+        "WHERE hs_code = ? ORDER BY created_at",
         (hs_code,),
     ).fetchall()
     return [dict(r) for r in rows]
 
 
 def add_company(
-    conn: sqlite3.Connection, hs_code: str, hs_level: int, company: str, note: str, created_at: str
+    conn: sqlite3.Connection, hs_code: str, hs_level: int,
+    symbol: str, country: str, name: str, market: str, created_at: str
 ) -> None:
+    """HS 코드에 종목을 연결(중복 무시)."""
     conn.execute(
-        "INSERT INTO related_companies (hs_code, hs_level, company, note, created_at) VALUES (?,?,?,?,?)",
-        (hs_code, hs_level, company, note, created_at),
+        "INSERT OR IGNORE INTO related_stocks "
+        "(hs_code, hs_level, symbol, country, name, market, created_at) VALUES (?,?,?,?,?,?,?)",
+        (hs_code, hs_level, symbol, country, name, market, created_at),
     )
     conn.commit()
 
 
 def delete_company(conn: sqlite3.Connection, cid: int) -> None:
-    conn.execute("DELETE FROM related_companies WHERE id = ?", (cid,))
+    conn.execute("DELETE FROM related_stocks WHERE id = ?", (cid,))
     conn.commit()

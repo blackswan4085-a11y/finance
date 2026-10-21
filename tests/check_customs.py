@@ -30,6 +30,22 @@ def row(period, code="8542320000", exp=100):
                 imp_dlr=80, exp_wgt=1, imp_wgt=1, bal_pay=exp - 80)
 
 
+class FakeStore:
+    """관련 종목 검증용 가짜 InstrumentStore. 몇몇 코드만 인식한다."""
+    KNOWN = {
+        "005930": {"symbol": "005930", "country": "KR", "name": "삼성전자", "market": "KOSPI"},
+        "AAPL": {"symbol": "AAPL", "country": "US", "name": "Apple", "market": "NASDAQ"},
+    }
+
+    def resolve(self, value):
+        value = str(value).strip().upper()
+        if not value:
+            raise ValueError("종목 코드 또는 이름을 입력해 주세요.")
+        if value in self.KNOWN:
+            return dict(self.KNOWN[value])
+        raise ValueError("등록된 종목을 찾지 못했습니다.")
+
+
 class CustomsChecks(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="finance-customs-")
@@ -42,13 +58,14 @@ class CustomsChecks(unittest.TestCase):
             collector.save_rows(conn, [row("202501"), row("202601", exp=150),
                                       row("202601", "8703230000", exp=20),
                                       row("202602", exp=200), row("202603", exp=250)])
-            db.add_company(conn, "85", 2, "기존 기업", "기존 메모", "2026-01-01")
+            db.add_company(conn, "85", 2, "005930", "KR", "삼성전자", "KOSPI", "2026-01-01")
             conn.execute("INSERT INTO collection_meta VALUES ('latest_month','202603')")
             conn.commit()
         self.base = self.root / "finance"
         self.base.mkdir()
         self.settings = {"source_dir": str(self.source), "months": 3, "api_key": "test-secret-key"}
-        self.service = CustomsService(self.base, self.settings)
+        self.store = FakeStore()
+        self.service = CustomsService(self.base, self.settings, self.store)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -77,9 +94,9 @@ class CustomsChecks(unittest.TestCase):
     def test_import_preserves_source_and_never_overwrites_finance(self):
         before = self.digest()
         self.assertEqual(self.service.get("meta")["latest_month"], "202603")
-        self.assertEqual(self.service.get("detail", {"code": ["85"]})["companies"][0]["company"], "기존 기업")
-        self.service.post("company/add", {"hs_code": "85", "hs_level": 2, "company": "추가 기업"})
-        reopened = CustomsService(self.base, self.settings)
+        self.assertEqual(self.service.get("detail", {"code": ["85"]})["companies"][0]["symbol"], "005930")
+        self.service.post("company/add", {"hs_code": "85", "hs_level": 2, "symbol": "AAPL"})
+        reopened = CustomsService(self.base, self.settings, self.store)
         self.assertEqual(len(reopened.get("detail", {"code": ["85"]})["companies"]), 2)
         self.assertEqual(self.digest(), before)
         # Copied code and database continue to work without the original project.
@@ -103,10 +120,16 @@ class CustomsChecks(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.service.get("level", query)
         with self.assertRaises(ValueError):
-            self.service.post("company/add", {"hs_code": "85", "hs_level": 4, "company": "기업"})
-        self.service.post("company/add", {"hs_code": "8542", "hs_level": 4, "company": " <기업> ", "note": "메모"})
+            # HS 코드와 레벨 불일치
+            self.service.post("company/add", {"hs_code": "85", "hs_level": 4, "symbol": "005930"})
+        with self.assertRaises(ValueError):
+            # 알 수 없는 종목
+            self.service.post("company/add", {"hs_code": "8542", "hs_level": 4, "symbol": "ZZZ"})
+        self.service.post("company/add", {"hs_code": "8542", "hs_level": 4, "symbol": "005930"})
         saved = self.service.get("detail", {"code": ["8542"]})["companies"]
-        self.assertEqual(saved[0]["company"], "<기업>")
+        self.assertEqual(saved[0]["symbol"], "005930")
+        self.assertEqual(saved[0]["name"], "삼성전자")
+        self.assertNotIn("note", saved[0])
         self.service.post("company/delete", {"id": saved[0]["id"]})
         self.assertEqual(self.service.get("detail", {"code": ["8542"]})["companies"], [])
 
@@ -214,6 +237,8 @@ class CustomsChecks(unittest.TestCase):
             industry.return_value.catalogue.return_value = {}
             instrument = stack.enter_context(patch.object(server, "InstrumentStore"))
             instrument.return_value.counts.return_value = {}
+            instrument.return_value.resolve.return_value = {
+                "symbol": "005930", "country": "KR", "name": "삼성전자", "market": "KOSPI"}
             worker = threading.Thread(target=server.serve, args=(None, cfg), daemon=True)
             worker.start()
             self.assertTrue(ready.wait(5))
@@ -232,10 +257,10 @@ class CustomsChecks(unittest.TestCase):
                 self.assertEqual(request("/api/customs/names?level=3")[0], 400)
                 self.assertEqual(request("/api/customs/unknown")[0], 404)
                 self.assertEqual(request("/api/customs/company/add", [1, 2])[0], 400)
-                payload = {"hs_code": "85", "hs_level": 2, "company": "HTTP 기업"}
+                payload = {"hs_code": "85", "hs_level": 2, "symbol": "005930"}
                 self.assertEqual(request("/api/customs/company/add", payload, {"Content-Type": "application/json", "Origin": "https://other.example"})[0], 403)
                 self.assertEqual(request("/api/customs/company/add", payload)[0], 200)
-                self.assertIn("HTTP 기업", request("/api/customs/detail?code=85")[1])
+                self.assertIn("005930", request("/api/customs/detail?code=85")[1])
             finally:
                 servers[0].shutdown()
                 worker.join(5)
