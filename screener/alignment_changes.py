@@ -72,6 +72,40 @@ def record(base_dir: str, frame, asof_date: str) -> None:
         _save(base_dir, snapshots)
 
 
+def has_comparison(base_dir: str) -> bool:
+    """비교 가능한 스냅샷(2개 이상)이 있는지."""
+    return len(_load(base_dir)) >= 2
+
+
+def backfill(base_dir: str, cfg, weeks: int = 2) -> dict:
+    """저장된 스냅샷이 부족할 때, 과거 주(금요일) 기준으로 정배열을 재계산해 채운다.
+
+    이미 2년치 주가 캐시가 있으므로 다운로드 없이 과거 기준 정배열을 다시 계산할 수 있다.
+    가장 최근 'weeks'개 주(금요일)에 대해, 해당 기준일 스냅샷이 없으면 run_screen 으로
+    재계산해 저장한다. 반환: {created: [asof...], skipped: [asof...]}.
+
+    주의: 전체 종목 재스캔이라 수십 초~분이 걸릴 수 있다(버튼 트리거 전용).
+    """
+    from datetime import timedelta
+    from .screen import run_screen
+    from .weekly import previous_week_friday
+
+    base_friday = previous_week_friday()
+    targets = [base_friday - timedelta(days=7 * i) for i in range(weeks)]  # 최근→과거
+    targets.sort()  # 과거→최근 순으로 저장
+    existing = {s.get("asof_date") for s in _load(base_dir)}
+    created, skipped = [], []
+    for asof in targets:
+        iso = asof.isoformat()
+        if iso in existing:
+            skipped.append(iso)
+            continue
+        df = run_screen(cfg, asof_date=asof)  # 과거 기준 정배열 재계산(캐시 사용)
+        record(base_dir, df, iso)
+        created.append(iso)
+    return {"created": created, "skipped": skipped}
+
+
 def changes(base_dir: str) -> dict:
     """가장 최근 2개 스냅샷을 비교해 신규/이탈 정배열 종목 반환.
 
@@ -82,12 +116,13 @@ def changes(base_dir: str) -> dict:
     snapshots = _load(base_dir)
     if not snapshots:
         return {"current": "", "previous": "", "added": [], "removed": [], "kept_count": 0,
-                "message": "아직 저장된 스냅샷이 없습니다. 스크리너를 한 번 이상 실행해 주세요."}
+                "can_backfill": True,
+                "message": "저장된 스냅샷이 없습니다. '지난 데이터로 비교 생성'을 누르면 과거 2주 기준으로 즉시 계산합니다."}
     current = snapshots[-1]
     if len(snapshots) < 2:
         return {"current": current["asof_date"], "previous": "", "added": [], "removed": [],
-                "kept_count": len(current["symbols"]),
-                "message": "비교할 직전 스냅샷이 아직 없습니다. 다음 주 스크리너 실행 후 변화가 표시됩니다."}
+                "kept_count": len(current["symbols"]), "can_backfill": True,
+                "message": "비교할 직전 스냅샷이 없습니다. '지난 데이터로 비교 생성'을 누르면 과거 기준으로 즉시 계산합니다."}
     previous = snapshots[-2]
     cur_map = {s["symbol"]: s for s in current["symbols"]}
     prev_set = {s["symbol"] for s in previous["symbols"]}
@@ -99,4 +134,4 @@ def changes(base_dir: str) -> dict:
     removed.sort(key=lambda s: (s.get("country", ""), s.get("symbol", "")))
     return {"current": current["asof_date"], "previous": previous["asof_date"],
             "added": added, "removed": removed,
-            "kept_count": len(cur_set & prev_set), "message": ""}
+            "kept_count": len(cur_set & prev_set), "can_backfill": False, "message": ""}

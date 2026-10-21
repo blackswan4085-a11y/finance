@@ -405,6 +405,19 @@ def serve(df: pd.DataFrame | None, cfg: Config) -> None:
                 except (OSError, ValueError, TypeError) as exc:
                     self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
                 return
+            if parsed.path == "/api/alignment-changes/backfill":
+                try:
+                    origin = self.headers.get("Origin")
+                    if origin and origin != "http://" + self.headers.get("Host", ""):
+                        self._send(403, '{"error":"허용되지 않은 요청입니다."}', "application/json; charset=utf-8")
+                        return
+                    # 과거 2주 기준 정배열 재계산(전체 종목 스캔 — 수십 초 소요). 완료 후 비교 반환.
+                    alignment_changes.backfill(base_dir, cfg, weeks=2)
+                    result = alignment_changes.changes(base_dir)
+                    self._send(200, json.dumps({"ok": True, **result}, ensure_ascii=False), "application/json; charset=utf-8")
+                except Exception as exc:  # noqa: BLE001
+                    self._send(400, json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), "application/json; charset=utf-8")
+                return
             if parsed.path == "/api/earnings-calendar/refresh":
                 try:
                     origin = self.headers.get("Origin")
